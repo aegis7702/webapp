@@ -10,7 +10,22 @@ import {
   fetchBalances,
 } from '../../../utils/tokenSession';
 
+const MOBILE_BREAKPOINT = 640;
+
+/** On mobile: show balance with 0~4 decimal places. */
+function formatBalanceForDisplay(raw: string, isMobile: boolean): string {
+  if (!isMobile) return raw;
+  const trimmed = raw.trim();
+  if (!trimmed) return '0';
+  const dot = trimmed.indexOf('.');
+  if (dot === -1) return trimmed;
+  const intPart = trimmed.slice(0, dot) || '0';
+  const decPart = trimmed.slice(dot + 1).slice(0, 4).replace(/0+$/, '');
+  return decPart ? `${intPart}.${decPart}` : intPart;
+}
+
 export function HomeContent() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [showAddToken, setShowAddToken] = useState(false);
   const [tokenAddress, setTokenAddress] = useState('');
@@ -20,6 +35,12 @@ export function HomeContent() {
   const [addError, setAddError] = useState('');
   const [ethBalance, setEthBalance] = useState('0');
   const [tokenBalances, setTokenBalances] = useState<{ address: string; symbol: string; balance: string }[]>([]);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
   const chainId = network?.chainId ?? '';
@@ -93,14 +114,16 @@ export function HomeContent() {
   const getBalance = (address: string) =>
     tokenBalances.find((b) => b.address.toLowerCase() === address.toLowerCase())?.balance ?? '0';
 
+  const displayEthBalance = formatBalanceForDisplay(ethBalance, isMobile);
+
   return (
     <div className="flex-1 overflow-y-auto bg-stone-50 flex flex-col relative">
       <div className="flex-1 px-6 md:px-12 py-8 md:py-12 max-w-4xl mx-auto w-full">
         {/* Wallet Balance - ETH (decimal 18) */}
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl p-6 md:p-8 text-white mb-6 shadow-md">
-          <p className="text-sm opacity-90 mb-1">{network?.name ?? 'Network'}</p>
-          <h2 className="text-2xl md:text-3xl font-bold">
-            {ethBalance} <span className="font-semibold opacity-95">ETH</span>
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl p-6 md:p-8 text-white mb-6 shadow-md min-w-0 overflow-hidden">
+          <p className="text-sm opacity-90 mb-1 truncate">{network?.name ?? 'Network'}</p>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold break-all min-w-0">
+            {displayEthBalance} <span className="font-semibold opacity-95">ETH</span>
           </h2>
         </div>
 
@@ -121,7 +144,9 @@ export function HomeContent() {
                   <span className="text-sm md:text-base font-medium text-stone-900">
                     {t.symbol}
                   </span>
-                  <span className="text-sm md:text-base text-stone-600">{getBalance(t.address)}</span>
+                  <span className="text-sm md:text-base text-stone-600">
+                    {formatBalanceForDisplay(getBalance(t.address), isMobile)}
+                  </span>
                 </div>
               ))
             )}
@@ -181,14 +206,14 @@ export function HomeContent() {
 
       {/* Add Token Modal */}
       {showAddToken && (
-        <div className="fixed inset-0 bg-stone-900/50 flex items-start justify-center z-50 px-8 pt-20">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-lg">
+        <div className="fixed inset-0 bg-stone-900/50 flex items-start justify-center z-50 px-4 sm:px-8 pt-20 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-lg min-w-0 my-4">
             <h3 className="font-semibold text-2xl text-stone-900 mb-6">Add Token</h3>
             {addError && <p className="text-sm text-red-600 mb-4">{addError}</p>}
             <div className="space-y-4 mb-6">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-sm font-medium text-stone-700 mb-2">Token Address</label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 min-w-0">
                   <input
                     type="text"
                     value={tokenAddress}
@@ -199,13 +224,13 @@ export function HomeContent() {
                       setAddError('');
                     }}
                     placeholder="0x..."
-                    className="flex-1 bg-stone-100 rounded-lg px-4 py-3 text-sm text-stone-800 outline-none border border-stone-200"
+                    className="min-w-0 flex-1 bg-stone-100 rounded-lg px-4 py-3 text-sm text-stone-800 outline-none border border-stone-200"
                   />
                   <button
                     type="button"
                     onClick={handleFetchSymbol}
                     disabled={!tokenAddress.trim() || !network?.rpcUrl || symbolLoading}
-                    className="shrink-0 px-4 py-3 rounded-lg bg-stone-200 text-stone-700 text-sm font-medium hover:bg-stone-300 disabled:opacity-50"
+                    className="shrink-0 px-4 py-3 rounded-lg bg-stone-200 text-stone-700 text-sm font-medium hover:bg-stone-300 disabled:opacity-50 w-full sm:w-auto"
                   >
                     {symbolLoading ? '...' : 'Get Symbol'}
                   </button>
