@@ -8,6 +8,8 @@ interface UnifiedModalProps {
   children: ReactNode;
   footer?: ReactNode;
   showCloseButton?: boolean;
+  /** When true, modal content fills the viewport (e.g. Apply Aegis flow). */
+  fullScreen?: boolean;
 }
 
 export function UnifiedModal({ 
@@ -16,13 +18,14 @@ export function UnifiedModal({
   title, 
   children, 
   footer,
-  showCloseButton = true 
+  showCloseButton = true,
+  fullScreen = false,
 }: UnifiedModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-stone-900/50 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-auto">
+    <div className={`fixed inset-0 bg-stone-900/50 flex items-center justify-center z-50 overflow-y-auto ${fullScreen ? 'p-0' : 'px-4 py-8'}`}>
+      <div className={`bg-white flex flex-col ${fullScreen ? 'w-full h-full max-w-none max-h-none rounded-none' : 'rounded-2xl w-full max-w-2xl max-h-[90vh] my-auto'}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-stone-200 flex-shrink-0">
           <h3 className="font-semibold text-xl text-stone-900">{title}</h3>

@@ -240,7 +240,7 @@ export function AgentChat() {
       <AnimatePresence>
         {!isExpanded && (
           <div
-            className="absolute right-[-28px] bottom-[88px] w-[60px] h-14 group z-50"
+            className="absolute right-[-28px] bottom-[88px] w-[60px] h-14 group z-30"
             aria-hidden
           >
             <motion.button
@@ -284,11 +284,11 @@ export function AgentChat() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsExpanded(false)}
-              className="fixed inset-0 bg-stone-900/20 z-40"
+              className="fixed inset-0 bg-stone-900/20 z-20"
             />
 
             {/* Chat Panel - viewport-centered via wrapper (fixed parent can create containing block) */}
-            <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center">
+            <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center">
               <motion.div
                 initial={{ y: '100%', opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}

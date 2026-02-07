@@ -6,7 +6,7 @@ type AegisStatus = 'not-applied' | 'applied';
 type ModalStep = 'confirmation' | 'executing' | 'success' | null;
 
 // Official Aegis Implementation Contract
-const AEGIS_CONTRACT_ADDRESS = '0xAegis742d35Bd891f3C3e8a29D35c81234';
+const AEGIS_CONTRACT_ADDRESS = '0x45715e7E41098de7B1726a7a182268da4aEB9804';
 
 export function AegisSetup() {
   const [status, setStatus] = useState<AegisStatus>('not-applied');
@@ -121,6 +121,7 @@ export function AegisSetup() {
         <UnifiedModal
           isOpen={modalStep === 'confirmation'}
           onClose={handleCancel}
+          fullScreen
           title="Apply Aegis Implementation"
           footer={
             <div className="flex gap-3">
@@ -175,6 +176,7 @@ export function AegisSetup() {
         {/* Executing Modal */}
         <UnifiedModal
           isOpen={modalStep === 'executing'}
+          fullScreen
           title="Applying Aegis Implementation"
           showCloseButton={false}
         >
@@ -193,6 +195,7 @@ export function AegisSetup() {
         <UnifiedModal
           isOpen={modalStep === 'success'}
           onClose={handleSuccess}
+          fullScreen
           title="Aegis Implementation Applied"
           footer={
             <button
