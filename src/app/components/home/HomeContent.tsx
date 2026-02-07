@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MessageCircle, Send, Plus, X } from 'lucide-react';
+import { AegisSetup } from './AegisSetup';
+import { Token } from '../../../types';
 import { DEFAULT_NETWORKS, DEFAULT_TOKENS_BY_CHAIN } from '../../../config/netwotk';
 import { getWalletSession } from '../../../utils/walletSession';
 import {
@@ -126,6 +128,8 @@ export function HomeContent() {
             {displayEthBalance} <span className="font-semibold opacity-95">ETH</span>
           </h2>
         </div>
+
+        <AegisSetup />
 
         {/* Token List - decimals + balance from batch */}
         <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-stone-200 mb-6">
