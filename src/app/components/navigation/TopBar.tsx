@@ -1,8 +1,10 @@
 import { User, Bell, Settings } from 'lucide-react';
-import { clearWalletSession } from '../../../utils/walletSession'; // TODO: Remove this
-
+import { clearWalletSession, getWalletSession } from '../../../utils/walletSession'; // TODO: Remove clearWalletSession
+import { formatShortAddress } from '../../../utils/walletUtils';
 
 export function TopBar() {
+  const session = getWalletSession();
+  const displayAddress = session?.address ? formatShortAddress(session.address) : 'Account 1';
   return (
     <div className="border-b border-stone-200">
       <div className="flex items-center justify-between px-6 py-6">
@@ -11,7 +13,7 @@ export function TopBar() {
           <button className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full shadow-sm">
             <User className="w-4 h-4 text-white" />
           </button>
-          <div className="font-semibold text-sm text-stone-800">Account 1</div>
+          <div className="font-semibold text-sm text-stone-800 font-mono">{displayAddress}</div>
         </div>
 
         {/* Right side: Notification and Settings */}
@@ -29,6 +31,8 @@ export function TopBar() {
 }
 
 export function TopBarWithSettings({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const session = getWalletSession();
+  const displayAddress = session?.address ? formatShortAddress(session.address) : 'Account 1';
   return (
     <div className="border-b border-stone-200">
       <div className="flex items-center justify-between px-6 py-6">
@@ -37,7 +41,7 @@ export function TopBarWithSettings({ onOpenSettings }: { onOpenSettings: () => v
           <button className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full shadow-sm">
             <User className="w-4 h-4 text-white" />
           </button>
-          <div className="font-semibold text-sm text-stone-800">Account 1</div>
+          <div className="font-semibold text-sm text-stone-800 font-mono">{displayAddress}</div>
           {/* TODO: Remove this */}
           <button
             type="button"

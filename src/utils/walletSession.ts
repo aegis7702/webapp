@@ -3,6 +3,8 @@
  * persist encrypted payload + password hash in sessionStorage.
  */
 
+import { getAddressFromPrivateKey } from './walletUtils';
+
 const SESSION_KEY = 'aegis_wallet_session';
 const PBKDF2_ITERATIONS = 250_000;
 const SALT_LENGTH = 16;
@@ -103,6 +105,8 @@ export async function decryptPrivateKey(encryptedPayload: string, password: stri
 export interface WalletSession {
   encryptedPk: string;
   passwordHash: string;
+  /** Ethereum address (0x...) for display; set when saving session. */
+  address?: string;
 }
 
 /**
@@ -129,7 +133,7 @@ export function getWalletSession(): WalletSession | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as WalletSession;
-    if (parsed?.encryptedPk && parsed?.passwordHash) return parsed;
+    if (parsed?.encryptedPk) return parsed;
   } catch {
     // legacy: single encrypted pk
     if (raw && !raw.startsWith('{')) {
@@ -173,7 +177,8 @@ export async function encryptAndSaveWalletSession(
 ): Promise<void> {
   const encryptedPk = await encryptPrivateKey(privateKey, password);
   const passwordHash = await hashPassword(password);
-  saveWalletSession({ encryptedPk, passwordHash });
+  const address = getAddressFromPrivateKey(privateKey) ?? undefined;
+  saveWalletSession({ encryptedPk, passwordHash, address });
 }
 
 /** @deprecated Use encryptAndSaveWalletSession */

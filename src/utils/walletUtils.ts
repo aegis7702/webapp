@@ -46,3 +46,10 @@ export function getAddressFromPrivateKey(pk: string): string | null {
     return null;
   }
 }
+
+/** Format address as 0x1234...5678 (first 4 + last 4 hex chars). */
+export function formatShortAddress(address: string): string {
+  const hex = address.startsWith('0x') ? address.slice(2) : address;
+  if (hex.length < 9) return address;
+  return '0x' + hex.slice(0, 4) + '...' + hex.slice(-4);
+}

@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
+import { getWalletSession } from '../../../utils/walletSession';
+import { formatShortAddress } from '../../../utils/walletUtils';
 import { ApiKeyManagementScreen } from './ApiKeyManagementScreen';
 import { AddNetworkScreen } from './AddNetworkScreen';
 
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
+  const session = getWalletSession();
+  const displayAddress = session?.address ? formatShortAddress(session.address) : '—';
   const [gptUsage, setGptUsage] = useState(true);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [showApiKeyManagement, setShowApiKeyManagement] = useState(false);
@@ -49,7 +53,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             <div className="bg-white border-y border-stone-200">
               <div className="px-6 py-4">
                 <p className="text-sm font-medium text-stone-900 mb-1">My Wallet</p>
-                <p className="text-xs text-stone-500 font-mono">0x742d...35Bd</p>
+                <p className="text-xs text-stone-500 font-mono">{displayAddress}</p>
               </div>
             </div>
           </div>
