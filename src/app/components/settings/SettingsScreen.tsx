@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
+import { DEFAULT_NETWORKS } from '../../../config/netwotk';
+import { getSavedNetworks } from '../../../utils/networkSession';
 import { getWalletSession } from '../../../utils/walletSession';
 import { formatShortAddress } from '../../../utils/walletUtils';
 import { ApiKeyManagementScreen } from './ApiKeyManagementScreen';
@@ -12,9 +14,9 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [showApiKeyManagement, setShowApiKeyManagement] = useState(false);
   const [showAddNetwork, setShowAddNetwork] = useState(false);
-  const [selectedNetwork, setSelectedNetwork] = useState('Ethereum');
-
-  const networks = ['Ethereum', 'Polygon', 'Arbitrum', 'Optimism'];
+  const savedNetworks = getSavedNetworks();
+  const networks = [...DEFAULT_NETWORKS, ...savedNetworks];
+  const [selectedNetwork, setSelectedNetwork] = useState(() => DEFAULT_NETWORKS[0]?.name ?? '');
 
   if (showApiKeyManagement) {
     return <ApiKeyManagementScreen onBack={() => setShowApiKeyManagement(false)} />;
@@ -118,12 +120,13 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             <div className="bg-white border-y border-stone-200 divide-y divide-stone-200">
               {networks.map((network) => (
                 <button
-                  key={network}
-                  onClick={() => setSelectedNetwork(network)}
+                  key={`${network.chainId}-${network.name}`}
+                  type="button"
+                  onClick={() => setSelectedNetwork(network.name)}
                   className="w-full px-6 py-4 flex items-center justify-between hover:bg-stone-50 transition-colors"
                 >
-                  <p className="text-sm font-medium text-stone-900">{network}</p>
-                  {selectedNetwork === network && (
+                  <p className="text-sm font-medium text-stone-900">{network.name}</p>
+                  {selectedNetwork === network.name && (
                     <div className="w-2 h-2 bg-orange-500 rounded-full" />
                   )}
                 </button>
