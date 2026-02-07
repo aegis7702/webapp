@@ -8,6 +8,7 @@ export interface Token {
 
 export interface Implementation {
   id: string;
+  address: string;
   state: 'active' | 'registered';
   verdict: 'safe' | 'unsafe';
   title: string;

@@ -51,7 +51,7 @@ export function ImplementationCard({
   const handleCopyAddress = (e: React.MouseEvent) => {
     e.stopPropagation();
     // Generate a mock contract address based on implementation id
-    const mockAddress = `0x${implementation.id.substring(0, 8)}...${implementation.id.substring(implementation.id.length - 4)}`;
+    const mockAddress = implementation.address;
     navigator.clipboard.writeText(mockAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -106,7 +106,7 @@ export function ImplementationCard({
           <div className="flex items-center gap-2">
             <span className="text-xs text-stone-600">Contract Address:</span>
             <span className="text-xs font-mono text-stone-700">
-              0x{implementation.id.substring(0, 4)}...{implementation.id.substring(implementation.id.length - 4)}
+              {implementation.address}
             </span>
             <button
               onClick={handleCopyAddress}
@@ -256,7 +256,7 @@ export function ImplementationCard({
                           Deactivate
                         </button>
                       )}
-                      {onChange && (
+                      {/* {onChange && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -266,7 +266,7 @@ export function ImplementationCard({
                         >
                           Change
                         </button>
-                      )}
+                      )} */}
                     </>
                   )}
                 </div>

@@ -8,6 +8,7 @@ export const mockRegisteredImplementations: Implementation[] = [];
 export const demoImplementations: Implementation[] = [
   {
     id: 'demo-1',
+    address: '0x16b0e675C0CE766e82bf9B58dC2d2F247985B302',
     state: 'registered',
     verdict: 'safe',
     title: 'Batch Executor',
@@ -18,6 +19,7 @@ export const demoImplementations: Implementation[] = [
   },
   {
     id: 'demo-2',
+    address: '0xE6C896ac6B6195Da7daDF66Fe5DC39FBb0e7321b',
     state: 'registered',
     verdict: 'safe',
     title: 'Session Key Manager',
@@ -28,6 +30,7 @@ export const demoImplementations: Implementation[] = [
   },
   {
     id: 'demo-3',
+    address: '0x373325c876eF8437069453e050a5f963a20Bd928',
     state: 'registered',
     verdict: 'unsafe',
     title: 'Token Swap',
