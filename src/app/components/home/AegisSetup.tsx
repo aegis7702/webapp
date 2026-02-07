@@ -5,12 +5,13 @@ import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSessio
 import { getLoginPasswordInMemory } from '../../../utils/authMemory';
 import { getSelectedNetwork, isDelegatedToImplementation } from '../../../utils/tokenSession';
 import { sendEIP7702ApplyTransaction } from '../../../utils/eip7702';
+import config from '../../../config/address.json';
 
 type AegisStatus = 'not-applied' | 'applied';
 type ModalStep = 'confirmation' | 'executing' | 'success' | 'failure' | null;
 
 // Official Aegis Implementation Contract
-const AEGIS_CONTRACT_ADDRESS = '0x2f7bB54E59DadC1f593FAea2c84092825Fd0533B';
+const AEGIS_CONTRACT_ADDRESS = config.AegisGuardDelegator;
 
 export function AegisSetup() {
   const [status, setStatus] = useState<AegisStatus>('not-applied');

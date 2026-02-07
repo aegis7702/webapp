@@ -1,6 +1,6 @@
-import { UnifiedModal } from './UnifiedModal';
+import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { UnifiedModal } from './UnifiedModal';
 
 interface DiagnosisReportModalProps {
   isOpen: boolean;
@@ -58,6 +58,7 @@ export function DiagnosisReportModal({
       isOpen={isOpen}
       onClose={onClose}
       title="AI Audit Report"
+      fullScreen
       footer={
         <div className="flex flex-col sm:flex-row gap-3">
           <button
@@ -70,7 +71,7 @@ export function DiagnosisReportModal({
             onClick={onRegister}
             className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors"
           >
-            Register
+            Confirm
           </button>
         </div>
       }

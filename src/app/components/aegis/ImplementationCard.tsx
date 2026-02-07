@@ -230,7 +230,7 @@ export function ImplementationCard({
                   )}
 
                   {/* Registered Actions */}
-                  {cardType === 'registered' && !isSelectable && onActivate && (
+                  {cardType === 'registered' && !isSelectable && onActivate && implementation.verdict !== 'unsafe' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

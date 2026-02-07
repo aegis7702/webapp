@@ -1,13 +1,67 @@
-import { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { ImplementationCard } from './ImplementationCard';
 import { AegisSearchArea } from './SafeguardSearchBar';
 import { UnifiedModal } from './UnifiedModal';
 import { DiagnosisReportModal } from './DiagnosisReportModal';
-import { demoImplementations } from '../../../data/mockData';
 import { Implementation } from '../../../types';
+import { fetchAegisBatch, fetchGetRecordCurrent, setAegisImplementation, type GetRecordCurrentDecoded } from '../../../utils/aegisSession';
+import config from '../../../config/address.json';
+import { getSelectedNetwork } from '../../../utils/tokenSession';
+import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
+import { getLoginPasswordInMemory } from '../../../utils/authMemory';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+function isZeroOrNullAddress(addr: string | null): boolean {
+  if (!addr) return true;
+  const a = addr.toLowerCase().replace(/^0x/, '').padStart(40, '0');
+  return a === '0'.repeat(40) || a === ZERO_ADDRESS.replace(/^0x/, '');
+}
 
 type ViewMode = 'normal' | 'selecting-replacement';
+
+/** Map getRecentRecords row to Implementation. Verdict Unknown is displayed as Unsafe. */
+function mapRecentRecordToImplementation(
+  impl: string,
+  name: string,
+  summary: string,
+  description: string,
+  reasons: string,
+  verdict: 'Unknown' | 'Safe' | 'Unsafe'
+): Implementation {
+  const displayUnsafe = verdict !== 'Safe'; // Unknown and Unsafe both show as Unsafe
+  const shortAddr = impl.slice(0, 10) + '...' + impl.slice(-6);
+  return {
+    id: impl,
+    address: impl,
+    state: 'registered',
+    verdict: displayUnsafe ? 'unsafe' : 'safe',
+    title: name?.trim() || shortAddr,
+    provider: 'Registry',
+    description: description?.trim() || summary?.trim() || reasons?.trim() || 'No description.',
+    riskLevel: verdict === 'Safe' ? 'safe' : 'high', // Unknown and Unsafe → high (red/Unsafe)
+  };
+}
+
+/** Map getRecordCurrent + implementationAddress to Implementation for Active card. */
+function mapGetRecordCurrentToImplementation(
+  implementationAddress: string,
+  record: GetRecordCurrentDecoded
+): Implementation {
+  const verdictUnsafe = record.verdict !== 'Safe';
+  return {
+    id: implementationAddress,
+    address: implementationAddress,
+    state: 'active',
+    verdict: verdictUnsafe ? 'unsafe' : 'safe',
+    title: record.name?.trim() || implementationAddress.slice(0, 10) + '...' + implementationAddress.slice(-6),
+    provider: 'Registry',
+    description: record.description?.trim() || record.summary?.trim() || record.reasons?.trim() || 'No description.',
+    riskLevel: record.verdict === 'Safe' ? 'safe' : 'high',
+  };
+}
 
 export function AegisContent() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -15,8 +69,60 @@ export function AegisContent() {
   const [hasSearched, setHasSearched] = useState(false);
 
   // State management
-  const [activeImpl, setActiveImpl] = useState<Implementation | null>(demoImplementations[0]);
-  const [registeredImpls, setRegisteredImpls] = useState<Implementation[]>([demoImplementations[1], demoImplementations[2]]);
+  const [activeImpl, setActiveImpl] = useState<Implementation | null>(null);
+  const [registeredImpls, setRegisteredImpls] = useState<Implementation[]>([]);
+  const [registeredLoading, setRegisteredLoading] = useState(true);
+
+  type ActivateStep = 'idle' | 'confirm' | 'executing' | 'success' | 'error';
+  const [activateStep, setActivateStep] = useState<ActivateStep>('idle');
+  const [activateTxHash, setActivateTxHash] = useState<string | null>(null);
+  const [activateError, setActivateError] = useState<string | null>(null);
+
+  const refetchAegisData = useCallback(() => {
+    const rpcUrl = getSelectedNetwork()?.rpcUrl;
+    const walletAddress = getWalletSession()?.address;
+    if (!rpcUrl) {
+      setRegisteredLoading(false);
+      setActiveImpl(null);
+      return;
+    }
+    setRegisteredLoading(true);
+    fetchAegisBatch(rpcUrl, config.ImplSafetyRegistry, config.AegisGuardDelegator, walletAddress)
+      .then((result) => {
+        if (isZeroOrNullAddress(result.implementationAddress)) {
+          setActiveImpl(null);
+        } else if (result.implementationAddress && result.getRecordCurrent) {
+          setActiveImpl(
+            mapGetRecordCurrentToImplementation(result.implementationAddress, result.getRecordCurrent)
+          );
+        } else {
+          setActiveImpl(null);
+        }
+        if (result.getRecentRecords) {
+          const r = result.getRecentRecords;
+          const list: Implementation[] = r.impls.map((impl, i) =>
+            mapRecentRecordToImplementation(
+              impl,
+              r.names[i] ?? '',
+              r.summaries[i] ?? '',
+              r.descriptions[i] ?? '',
+              r.reasonsList[i] ?? '',
+              r.verdicts[i] ?? 'Unknown'
+            )
+          );
+          setRegisteredImpls(list);
+        }
+      })
+      .catch(() => {
+        setRegisteredImpls([]);
+        setActiveImpl(null);
+      })
+      .finally(() => setRegisteredLoading(false));
+  }, []);
+
+  useEffect(() => {
+    refetchAegisData();
+  }, [refetchAegisData]);
 
   // Modals and modes
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -52,31 +158,41 @@ export function AegisContent() {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const handleSearch = (network: string, address: string) => {
+  const handleSearch = async (_network: string, address: string) => {
     setHasSearched(true);
-    if (address.trim()) {
-      // Simulate search: 50% chance of finding a new unknown implementation
-      const isNewDetection = Math.random() > 0.5;
-
-      if (isNewDetection) {
-        // Create a new unknown implementation
-        const newImpl: Implementation = {
-          id: address.trim(),
-          state: 'registered',
-          verdict: 'safe',
-          title: 'New Implementation Detected',
-          provider: 'Unknown',
-          description: 'This is a previously unknown implementation.',
-          riskLevel: 'unknown',
-        };
-        setSearchResults([newImpl]);
-      } else {
-        // Return known implementations
-        setSearchResults([...demoImplementations]);
-      }
-    } else {
+    const trimmed = address.trim();
+    if (!trimmed) {
       setSearchResults([]);
+      return;
     }
+    const rpcUrl = getSelectedNetwork()?.rpcUrl;
+    if (!rpcUrl) {
+      setSearchResults([]);
+      return;
+    }
+    const record = await fetchGetRecordCurrent(rpcUrl, trimmed, config.ImplSafetyRegistry);
+    if (!record) {
+      setSearchResults([]);
+      return;
+    }
+    // updatedAt === 0 means not yet registered → New Implementation Detected
+    if (record.updatedAt === 0n) {
+      const newImpl: Implementation = {
+        id: trimmed,
+        address: trimmed,
+        state: 'registered',
+        verdict: 'safe',
+        title: 'New Implementation Detected',
+        provider: 'Unknown',
+        description: 'This implementation is not yet in the registry. Run diagnosis to register.',
+        riskLevel: 'unknown',
+      };
+      setSearchResults([newImpl]);
+      return;
+    }
+    // Apply registry data
+    const impl = mapGetRecordCurrentToImplementation(trimmed, record);
+    setSearchResults([impl]);
   };
 
   const handleRunDiagnosis = (impl: Implementation) => {
@@ -114,6 +230,7 @@ export function AegisContent() {
     }
     setShowDiagnosisReport(false);
     setDiagnosingImpl(null);
+    refetchAegisData();
   };
 
   const handleDeactivate = () => {
@@ -164,24 +281,54 @@ export function AegisContent() {
 
   const handleActivate = (impl: Implementation) => {
     setActivatingImpl(impl);
+    setActivateStep('confirm');
+    setActivateTxHash(null);
+    setActivateError(null);
     setShowActivateModal(true);
   };
 
-  const confirmActivate = () => {
-    setShowActivateModal(false);
-
-    if (activatingImpl) {
-      if (activeImpl) {
-        // Swap active and activating
-        setRegisteredImpls([...registeredImpls.filter(i => i.id !== activatingImpl.id), activeImpl]);
-        setActiveImpl(activatingImpl);
-      } else {
-        // Just activate
-        setActiveImpl(activatingImpl);
-        setRegisteredImpls(registeredImpls.filter(i => i.id !== activatingImpl.id));
-      }
-      setActivatingImpl(null);
+  const confirmActivate = async () => {
+    if (!activatingImpl) return;
+    const session = getWalletSession();
+    const network = getSelectedNetwork();
+    const password = getLoginPasswordInMemory();
+    if (!session?.encryptedPk || !network?.rpcUrl || !password) {
+      setActivateError('Session or network missing. Please log in and select a network.');
+      setActivateStep('error');
+      return;
     }
+    setActivateStep('executing');
+    let privateKey: string;
+    try {
+      privateKey = await decryptPrivateKey(session.encryptedPk, password);
+    } catch {
+      setActivateError('Decryption failed. Please log out and log in again.');
+      setActivateStep('error');
+      return;
+    }
+    const result = await setAegisImplementation({
+      privateKey,
+      rpcUrl: network.rpcUrl,
+      chainId: network.chainId,
+      implementationAddress: activatingImpl.address,
+    });
+    if (result.success) {
+      setActivateTxHash(result.txHash);
+      setActivateStep('success');
+    } else {
+      setActivateError(result.error);
+      setActivateStep('error');
+    }
+  };
+
+  const closeActivateModal = () => {
+    const wasSuccess = activateStep === 'success';
+    setShowActivateModal(false);
+    setActivatingImpl(null);
+    setActivateStep('idle');
+    setActivateTxHash(null);
+    setActivateError(null);
+    if (wasSuccess) refetchAegisData();
   };
 
   return (
@@ -252,14 +399,18 @@ export function AegisContent() {
           )}
         </div>
 
-        {/* Registered Implementations Section */}
+        {/* Registered Implementations Section - from getRecentRecords */}
         <div className="px-4 sm:px-6 py-6">
           <h2 className="text-sm font-semibold text-stone-900 mb-3">Registered Implementations</h2>
-          {registeredImpls.length > 0 ? (
+          {registeredLoading ? (
+            <div className="bg-white rounded-2xl p-6 border border-stone-200 text-center">
+              <p className="text-sm text-stone-500">Loading registered implementations…</p>
+            </div>
+          ) : registeredImpls.length > 0 ? (
             <div className="space-y-4">
-              {registeredImpls.map((impl) => (
+              {registeredImpls.map((impl, index) => (
                 <ImplementationCard
-                  key={impl.id}
+                  key={`${impl.id}-${index}`}
                   implementation={impl}
                   isExpanded={expandedId === impl.id}
                   onToggle={() => handleToggle(impl.id)}
@@ -355,37 +506,100 @@ export function AegisContent() {
         </p>
       </UnifiedModal>
 
-      {/* Activate Confirmation Modal */}
+      {/* Activate Implementation Modal (confirm → executing → success/error) */}
       <UnifiedModal
         isOpen={showActivateModal}
-        onClose={() => {
-          setShowActivateModal(false);
-          setActivatingImpl(null);
-        }}
-        title="Activate Implementation"
+        onClose={activateStep === 'executing' ? undefined : closeActivateModal}
+        title={
+          activateStep === 'confirm'
+            ? 'Activate Implementation'
+            : activateStep === 'executing'
+              ? 'Activating…'
+              : activateStep === 'success'
+                ? 'Activation complete'
+                : 'Activation failed'
+        }
+        showCloseButton={activateStep !== 'executing'}
+        fullScreen
         footer={
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => {
-                setShowActivateModal(false);
-                setActivatingImpl(null);
-              }}
-              className="flex-1 bg-stone-100 text-stone-800 py-3 rounded-xl font-semibold hover:bg-stone-200 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmActivate}
-              className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors"
-            >
-              Confirm
-            </button>
-          </div>
+          activateStep === 'confirm' ? (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={closeActivateModal}
+                className="flex-1 bg-stone-100 text-stone-800 py-3 rounded-xl font-semibold hover:bg-stone-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmActivate}
+                className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
+          ) : activateStep === 'success' || activateStep === 'error' ? (
+            <div className="flex justify-end">
+              <button
+                onClick={closeActivateModal}
+                className="px-6 py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          ) : undefined
         }
       >
-        <p className="text-sm text-stone-700">
-          Do you want to activate this implementation?
-        </p>
+        {activateStep === 'confirm' && activatingImpl && (
+          <div className="space-y-4">
+            <p className="text-stone-700">
+              Set this implementation as the active one for your Aegis Guard. All new transactions will use this implementation.
+            </p>
+            <div className="rounded-xl border border-stone-200 p-4 bg-stone-50">
+              <p className="font-medium text-stone-900">{activatingImpl.title || 'Unnamed'}</p>
+              <p className="text-xs text-stone-500 font-mono mt-1 break-all">{activatingImpl.address}</p>
+              {(activatingImpl.description || activatingImpl.details) && (
+                <p className="text-sm text-stone-600 mt-2">{activatingImpl.description || activatingImpl.details}</p>
+              )}
+            </div>
+            <p className="text-sm text-stone-600">
+              This will send a transaction to the Aegis Guard Delegator contract. Gas fees apply.
+            </p>
+          </div>
+        )}
+        {activateStep === 'executing' && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Loader2 className="w-14 h-14 text-orange-500 animate-spin mb-6" />
+            <p className="text-stone-800 font-medium">Setting active implementation…</p>
+            <p className="text-sm text-stone-600 mt-2">Please wait. Do not close this window.</p>
+          </div>
+        )}
+        {activateStep === 'success' && activateTxHash && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <CheckCircle2 className="w-16 h-16 text-green-500 mb-6" />
+            <p className="text-stone-800 font-medium">The implementation is now active.</p>
+            <p className="text-sm text-stone-600 mt-2">Transaction hash:</p>
+            {getSelectedNetwork()?.blockExplorer ? (
+              <a
+                href={`${getSelectedNetwork()!.blockExplorer!.replace(/\/$/, '')}/tx/${activateTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-orange-600 hover:underline font-mono text-sm break-all mt-1"
+              >
+                {activateTxHash}
+              </a>
+            ) : (
+              <span className="font-mono text-sm break-all mt-1 text-stone-700">{activateTxHash}</span>
+            )}
+            <p className="text-xs text-stone-500 mt-4">Close this modal to refresh the list.</p>
+          </div>
+        )}
+        {activateStep === 'error' && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <XCircle className="w-16 h-16 text-red-500 mb-6" />
+            <p className="text-stone-800 font-medium">Something went wrong.</p>
+            <p className="text-sm text-stone-600 mt-2 whitespace-pre-wrap">{activateError ?? 'Unknown error'}</p>
+          </div>
+        )}
       </UnifiedModal>
 
       {/* AI Audit Loading Modal */}
@@ -393,6 +607,7 @@ export function AegisContent() {
         isOpen={showDiagnosisLoading}
         title="Running AI Audit"
         showCloseButton={false}
+        fullScreen
       >
         <div className="py-12">
           <div className="flex flex-col items-center justify-center text-center space-y-6">

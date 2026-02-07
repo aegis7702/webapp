@@ -5,7 +5,11 @@ import { getSavedNetworks } from '../../../utils/networkSession';
 import { getSelectedNetwork, setSelectedNetwork as persistSelectedNetwork } from '../../../utils/tokenSession';
 import { NetworkSelector } from './NetworkSelector';
 
-export function AegisSearchArea({ onSearch }: { onSearch: (network: string, address: string) => void }) {
+export function AegisSearchArea({
+  onSearch,
+}: {
+  onSearch: (network: string, address: string) => void | Promise<void>;
+}) {
   const networkList = [...DEFAULT_NETWORKS, ...getSavedNetworks()];
   const networkNames = networkList.map((n) => n.name);
   const sessionNetwork = getSelectedNetwork();
@@ -21,11 +25,13 @@ export function AegisSearchArea({ onSearch }: { onSearch: (network: string, addr
     if (net) persistSelectedNetwork(net);
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     setIsSearching(true);
-    onSearch(selectedNetwork, searchAddress);
-    // Simulate search delay
-    setTimeout(() => setIsSearching(false), 1000);
+    try {
+      await onSearch(selectedNetwork, searchAddress);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
