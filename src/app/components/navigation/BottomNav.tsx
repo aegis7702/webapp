@@ -5,13 +5,13 @@ export function BottomNav({ activeTab, setActiveTab }: { activeTab: TabType; set
   const tabs: { id: TabType; label: string; icon: typeof Home }[] = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'aegis', label: 'Aegis', icon: Shield },
-    { id: 'agent', label: 'Agent', icon: Bot },
+    // { id: 'agent', label: 'Agent', icon: Bot },
     { id: 'activity', label: 'Activity', icon: Clock },
   ];
 
   return (
     <div className="border-t border-stone-200 bg-white">
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-3">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

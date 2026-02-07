@@ -12,7 +12,6 @@ import { ProtectionConfirmationScreen } from './components/onboarding/Protection
 import { LoginScreen } from './components/onboarding/LoginScreen';
 import { HomeContent } from './components/home/HomeContent';
 import { AegisContent } from './components/aegis/AegisContent';
-import { AgentContent } from './components/agent/AgentContent';
 import { ActivityContent } from './components/activity/ActivityContent';
 
 import { encryptAndSaveWalletSession, getWalletSession } from '../utils/walletSession';
@@ -103,7 +102,6 @@ export default function App() {
 
       {activeTab === 'home' && <HomeContent />}
       {activeTab === 'aegis' && <AegisContent />}
-      {activeTab === 'agent' && <AgentContent />}
       {activeTab === 'activity' && <ActivityContent />}
 
       <BottomNav

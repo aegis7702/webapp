@@ -110,13 +110,13 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* API Key Management */}
-              <button
+              {/* <button
                 onClick={() => setShowApiKeyManagement(true)}
                 className="w-full px-6 py-4 flex items-center justify-between hover:bg-stone-50 transition-colors"
               >
                 <p className="text-sm font-medium text-stone-900">API Key Management</p>
                 <ChevronRight className="w-5 h-5 text-stone-400" />
-              </button>
+              </button> */}
             </div>
           </div>
 
