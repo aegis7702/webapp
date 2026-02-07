@@ -9,7 +9,7 @@ export function AgentContent() {
             <MessageCircle className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-xl font-bold mb-2 text-stone-900">AI Security Agent</h2>
-          <p className="text-sm text-stone-600">Your 24/7 Web3 security assistant</p>
+          <p className="text-sm text-stone-600">Your 24/7 Aegis security assistant</p>
         </div>
         <div className="space-y-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100">
