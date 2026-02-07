@@ -236,36 +236,41 @@ export function AgentChat() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button - wrapper extends hover area to the right to prevent flicker */}
       <AnimatePresence>
         {!isExpanded && (
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            onClick={handleOpenPanel}
-            className="fixed bottom-[88px] right-6 w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all z-50 relative"
+          <div
+            className="absolute right-[-28px] bottom-[88px] w-[60px] h-14 group z-50"
+            aria-hidden
           >
-            {/* Loading Animation - Agent is working while minimized */}
-            {isAgentWorking && (
-              <motion.div
-                className="absolute inset-0 rounded-full border-2 border-white border-t-transparent"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              />
-            )}
+            <motion.button
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              onClick={handleOpenPanel}
+              className="absolute right-0 bottom-0 w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full shadow-lg flex items-center justify-center group-hover:right-[40px] group-hover:shadow-xl transition-all duration-200 ease-out cursor-pointer"
+            >
+              {/* Loading Animation - Agent is working while minimized */}
+              {isAgentWorking && (
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-white border-t-transparent"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+              )}
 
-            <MessageCircle className="w-6 h-6 text-white" />
+              <MessageCircle className="w-6 h-6 text-white" />
 
-            {/* Red Dot Indicator - New message available */}
-            {hasUnreadMessage && !isAgentWorking && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
-              />
-            )}
-          </motion.button>
+              {/* Red Dot Indicator - New message available */}
+              {hasUnreadMessage && !isAgentWorking && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white"
+                />
+              )}
+            </motion.button>
+          </div>
         )}
       </AnimatePresence>
 
@@ -282,15 +287,16 @@ export function AgentChat() {
               className="fixed inset-0 bg-stone-900/20 z-40"
             />
 
-            {/* Chat Panel */}
-            <motion.div
-              initial={{ y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 flex flex-col max-w-4xl mx-auto"
-              style={{ height: '50vh', maxHeight: '600px' }}
-            >
+            {/* Chat Panel - viewport-centered via wrapper (fixed parent can create containing block) */}
+            <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center">
+              <motion.div
+                initial={{ y: '100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                className="w-full max-w-4xl bg-white rounded-t-3xl shadow-2xl flex flex-col"
+                style={{ height: '50vh', maxHeight: '600px' }}
+              >
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200">
                 <div className="flex items-center gap-3">
@@ -410,7 +416,8 @@ export function AgentChat() {
                   Press Enter to send, Shift+Enter for new line
                 </p>
               </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>

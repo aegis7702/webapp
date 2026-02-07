@@ -12,6 +12,7 @@ import { ProtectionConfirmationScreen } from './components/onboarding/Protection
 import { LoginScreen } from './components/onboarding/LoginScreen';
 import { HomeContent } from './components/home/HomeContent';
 import { AegisContent } from './components/aegis/AegisContent';
+import { AgentChat } from './components/aegis/AgentChat';
 import { ActivityContent } from './components/activity/ActivityContent';
 
 import { encryptAndSaveWalletSession, getWalletSession } from '../utils/walletSession';
@@ -99,14 +100,15 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen max-w-6xl mx-auto bg-stone-50 shadow-xl relative">
       <TopBarWithSettings onOpenSettings={() => setShowSettings(true)} />
-
+      
       {activeTab === 'home' && <HomeContent />}
       {activeTab === 'aegis' && <AegisContent />}
       {activeTab === 'activity' && <ActivityContent />}
 
-      <BottomNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+      <AgentChat />
+      <BottomNav 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
       />
 
       {/* Settings Overlay */}
