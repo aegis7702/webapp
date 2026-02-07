@@ -15,10 +15,19 @@ import { AegisContent } from './components/aegis/AegisContent';
 import { AgentContent } from './components/agent/AgentContent';
 import { ActivityContent } from './components/activity/ActivityContent';
 
+import { encryptAndSaveWalletSession, getWalletSession } from '../utils/walletSession';
+
+function getInitialAppScreen(): AppScreen {
+  return getWalletSession()?.encryptedPk ? 'login' : 'launch';
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [appScreen, setAppScreen] = useState<AppScreen>('launch');
+  const [appScreen, setAppScreen] = useState<AppScreen>(getInitialAppScreen);
   const [showSettings, setShowSettings] = useState(false);
+  /** Pending pk to encrypt on password confirm (from create or import). */
+  const [pendingPrivateKey, setPendingPrivateKey] = useState<string | null>(null);
+  const [pendingFromImport, setPendingFromImport] = useState(false);
 
   // Entry flow screens
   if (appScreen === 'launch') {
@@ -35,15 +44,48 @@ export default function App() {
   }
 
   if (appScreen === 'create-wallet') {
-    return <CreateWalletScreen onComplete={() => setAppScreen('password-setup')} />;
+    return (
+      <CreateWalletScreen
+        onBack={() => setAppScreen('wallet-setup')}
+        onComplete={(privateKey) => {
+          setPendingPrivateKey(privateKey);
+          setPendingFromImport(false);
+          setAppScreen('password-setup');
+        }}
+      />
+    );
   }
 
   if (appScreen === 'import-key') {
-    return <ImportKeyScreen onComplete={() => setAppScreen('password-setup')} />;
+    return (
+      <ImportKeyScreen
+        onBack={() => setAppScreen('wallet-setup')}
+        onComplete={(privateKey) => {
+          setPendingPrivateKey(privateKey);
+          setPendingFromImport(true);
+          setAppScreen('password-setup');
+        }}
+      />
+    );
   }
 
   if (appScreen === 'password-setup') {
-    return <PasswordSetupScreen onComplete={() => setAppScreen('protection-confirmation')} />;
+    return (
+      <PasswordSetupScreen
+        isImportFlow={pendingFromImport}
+        onBack={() =>
+          setAppScreen(pendingFromImport ? 'import-key' : 'create-wallet')
+        }
+        onComplete={async (password) => {
+          if (pendingPrivateKey) {
+            await encryptAndSaveWalletSession(pendingPrivateKey, password);
+            setPendingPrivateKey(null);
+            setPendingFromImport(false);
+          }
+          setAppScreen('protection-confirmation');
+        }}
+      />
+    );
   }
 
   if (appScreen === 'protection-confirmation') {
