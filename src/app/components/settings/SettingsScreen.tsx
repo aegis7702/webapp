@@ -14,7 +14,7 @@ import { AddNetworkScreen } from './AddNetworkScreen';
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const session = getWalletSession();
   const displayAddress = session?.address ? formatShortAddress(session.address) : '—';
-  const [gptUsage, setGptUsage] = useState(true);
+  const [freezeUsage, setFreezeUsage] = useState(true);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [showApiKeyManagement, setShowApiKeyManagement] = useState(false);
   const [showAddNetwork, setShowAddNetwork] = useState(false);
@@ -37,7 +37,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
       {/* Header */}
       <div className="border-b border-stone-200 px-6 py-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold text-stone-900">Settings</h1>
-        <button 
+        <button
           onClick={onClose}
           className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-200 transition-colors"
         >
@@ -46,11 +46,11 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Advanced Mode Indicator */}
-      {advancedMode && (
+      {/* {advancedMode && (
         <div className="bg-orange-50 border-b border-orange-200 px-6 py-3">
           <p className="text-xs font-semibold text-orange-800">Advanced Mode Active</p>
         </div>
-      )}
+      )} */}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
@@ -71,20 +71,24 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             <h2 className="px-6 text-xs font-semibold text-stone-500 uppercase mb-2">Agent</h2>
             <div className="bg-white border-y border-stone-200 divide-y divide-stone-200">
               {/* GPT Usage Toggle */}
-              <div className="px-6 py-4 flex items-center justify-between">
-                <p className="text-sm font-medium text-stone-900">GPT Usage</p>
-                <button
-                  onClick={() => setGptUsage(!gptUsage)}
-                  className={`w-12 h-7 rounded-full transition-colors relative ${
-                    gptUsage ? 'bg-orange-500' : 'bg-stone-300'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${
-                      gptUsage ? 'right-0.5' : 'left-0.5'
-                    }`}
-                  />
-                </button>
+              {/* Advanced Mode Toggle */}
+              <div className="px-6 py-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-stone-900">Freeze Usage</p>
+                  <button
+                    onClick={() => setFreezeUsage(!freezeUsage)}
+                    className={`w-12 h-7 rounded-full transition-colors relative ${freezeUsage ? 'bg-orange-500' : 'bg-stone-300'
+                      }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${freezeUsage ? 'right-0.5' : 'left-0.5'
+                        }`}
+                    />
+                  </button>
+                </div>
+                <p className="text-xs text-stone-500">
+                Temporarily lock the account to stop all activity when a risk is detected.
+                </p>
               </div>
 
               {/* Advanced Mode Toggle */}
@@ -93,14 +97,12 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                   <p className="text-sm font-medium text-stone-900">Advanced Mode</p>
                   <button
                     onClick={() => setAdvancedMode(!advancedMode)}
-                    className={`w-12 h-7 rounded-full transition-colors relative ${
-                      advancedMode ? 'bg-orange-500' : 'bg-stone-300'
-                    }`}
+                    className={`w-12 h-7 rounded-full transition-colors relative ${advancedMode ? 'bg-orange-500' : 'bg-stone-300'
+                      }`}
                   >
                     <div
-                      className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${
-                        advancedMode ? 'right-0.5' : 'left-0.5'
-                      }`}
+                      className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${advancedMode ? 'right-0.5' : 'left-0.5'
+                        }`}
                     />
                   </button>
                 </div>
