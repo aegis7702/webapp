@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import { DEFAULT_NETWORKS } from '../../../config/netwotk';
 import { getSavedNetworks } from '../../../utils/networkSession';
+import {
+  getSelectedNetwork,
+  setSelectedNetwork as persistSelectedNetwork,
+} from '../../../utils/tokenSession';
 import { getWalletSession } from '../../../utils/walletSession';
 import { formatShortAddress } from '../../../utils/walletUtils';
 import { ApiKeyManagementScreen } from './ApiKeyManagementScreen';
@@ -16,7 +20,9 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const [showAddNetwork, setShowAddNetwork] = useState(false);
   const savedNetworks = getSavedNetworks();
   const networks = [...DEFAULT_NETWORKS, ...savedNetworks];
-  const [selectedNetwork, setSelectedNetwork] = useState(() => DEFAULT_NETWORKS[0]?.name ?? '');
+  const [selectedNetwork, setSelectedNetwork] = useState(
+    () => getSelectedNetwork()?.name ?? DEFAULT_NETWORKS[0]?.name ?? ''
+  );
 
   if (showApiKeyManagement) {
     return <ApiKeyManagementScreen onBack={() => setShowApiKeyManagement(false)} />;
@@ -122,7 +128,10 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                 <button
                   key={`${network.chainId}-${network.name}`}
                   type="button"
-                  onClick={() => setSelectedNetwork(network.name)}
+                  onClick={() => {
+                    persistSelectedNetwork(network);
+                    setSelectedNetwork(network.name);
+                  }}
                   className="w-full px-6 py-4 flex items-center justify-between hover:bg-stone-50 transition-colors"
                 >
                   <p className="text-sm font-medium text-stone-900">{network.name}</p>

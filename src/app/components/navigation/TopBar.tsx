@@ -53,7 +53,7 @@ export function TopBarWithSettings({ onOpenSettings }: { onOpenSettings: () => v
             className="rounded px-2 py-1 text-[10px] font-medium bg-amber-200 text-amber-900 hover:bg-amber-300"
             title="Clear encrypted login & account pk (dev)"
           >
-            PK Reset
+            PK R
           </button>
           <button
             type="button"
@@ -64,7 +64,7 @@ export function TopBarWithSettings({ onOpenSettings }: { onOpenSettings: () => v
             className="rounded px-2 py-1 text-[10px] font-medium bg-amber-200 text-amber-900 hover:bg-amber-300"
             title="Clear saved networks (dev)"
           >
-            Network Reset
+            NT R
           </button>
         </div>
 
