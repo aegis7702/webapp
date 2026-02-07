@@ -388,10 +388,10 @@ export function AegisContent() {
         </p>
       </UnifiedModal>
 
-      {/* Diagnosis Loading Modal */}
+      {/* AI Audit Loading Modal */}
       <UnifiedModal
         isOpen={showDiagnosisLoading}
-        title="Running Diagnosis"
+        title="Running AI Audit"
         showCloseButton={false}
       >
         <div className="py-12">
@@ -414,7 +414,7 @@ export function AegisContent() {
         </div>
       </UnifiedModal>
 
-      {/* Diagnosis Report Modal */}
+      {/* AI Audit Report Modal */}
       <DiagnosisReportModal
         isOpen={showDiagnosisReport}
         onClose={() => {

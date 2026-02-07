@@ -134,7 +134,7 @@ export function ImplementationCard({
           </div>
         )}
 
-        {/* New Detection: Risk Status + Run Diagnosis (Non-expandable) */}
+        {/* New Detection: Risk Status + Run AI Audit (Non-expandable) */}
         {isNewDetection && (
           <>
             <div className="mb-3"></div>
@@ -144,7 +144,7 @@ export function ImplementationCard({
                 Unknown
               </span>
 
-              {/* Run Diagnosis Button */}
+              {/* Run AI Audit Button */}
               {onRunDiagnosis && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <button
@@ -154,7 +154,7 @@ export function ImplementationCard({
                     }}
                     className="bg-orange-500 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-orange-600 transition-colors"
                   >
-                    Run Diagnosis
+                    Run AI Audit
                   </button>
                 </div>
               )}
@@ -175,13 +175,13 @@ export function ImplementationCard({
                     {implementation.description}
                   </p>
                   
-                  {/* Agent Diagnosis Info (if available) */}
+                  {/* Agent AI Audit Info (if available) */}
                   {implementation.verdict && (
                     <div className="mt-3 pt-3 border-t border-stone-300">
                       <p className={`text-xs font-semibold mb-1 ${
                         implementation.verdict === 'safe' ? 'text-green-900' : 'text-red-900'
                       }`}>
-                        Agent Diagnosis: {implementation.verdict === 'safe' ? 'Safe' : 'Unsafe'}
+                        Agent AI Audit: {implementation.verdict === 'safe' ? 'Safe' : 'Unsafe'}
                       </p>
                       <p className={`text-xs ${
                         implementation.verdict === 'safe' ? 'text-green-700' : 'text-red-700'
@@ -225,7 +225,7 @@ export function ImplementationCard({
                       }}
                       className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-orange-600 transition-colors"
                     >
-                      Run Diagnosis
+                      Run AI Audit
                     </button>
                   )}
 

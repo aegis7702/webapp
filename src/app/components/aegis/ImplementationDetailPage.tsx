@@ -148,14 +148,14 @@ export function ImplementationDetailPage({ implementation, onBack }: Implementat
           )}
         </div>
 
-        {/* Security & Diagnosis Section */}
+        {/* Security & AI Audit Section */}
         {!isNewDetection && (
           <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border-2 border-orange-200">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
                 <Shield className="w-4 h-4 text-white" />
               </div>
-              <h2 className="font-semibold text-base text-stone-900">Security & Diagnosis</h2>
+              <h2 className="font-semibold text-base text-stone-900">Security & AI Audit</h2>
             </div>
 
             <div className="space-y-4">
@@ -169,10 +169,10 @@ export function ImplementationDetailPage({ implementation, onBack }: Implementat
                 </div>
               </div>
 
-              {/* Agent Diagnosis Results */}
+              {/* Agent AI Audit Results */}
               {implementation.verdict && (
                 <div>
-                  <h3 className="text-sm font-semibold text-stone-700 mb-2">Agent Diagnosis</h3>
+                  <h3 className="text-sm font-semibold text-stone-700 mb-2">Agent AI Audit</h3>
                   <div className={`rounded-lg p-4 border-2 ${
                     implementation.verdict === 'safe' 
                       ? 'bg-green-50 border-green-200' 
@@ -263,7 +263,7 @@ export function ImplementationDetailPage({ implementation, onBack }: Implementat
         {/* Additional Context - New Detection */}
         {isNewDetection && (
           <div className="bg-blue-50 rounded-2xl p-6 border border-blue-200">
-            <h3 className="font-semibold text-sm text-blue-900 mb-3">Understanding Implementation Diagnosis</h3>
+            <h3 className="font-semibold text-sm text-blue-900 mb-3">Understanding Implementation AI Audit</h3>
             <div className="space-y-2 text-xs text-blue-800">
               <p>
                 <span className="font-semibold">• Agent Analysis:</span> Aegis Agent performs deep analysis 

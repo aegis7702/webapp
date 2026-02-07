@@ -57,7 +57,7 @@ export function DiagnosisReportModal({
     <UnifiedModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Diagnosis Report"
+      title="AI Audit Report"
       footer={
         <div className="flex flex-col sm:flex-row gap-3">
           <button
