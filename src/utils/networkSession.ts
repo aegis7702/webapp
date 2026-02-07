@@ -59,3 +59,8 @@ export function removeSavedNetwork(chainId: string): void {
   const list = getSavedNetworks().filter((n) => n.chainId !== chainId);
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(list));
 }
+
+/** Clear all user-added networks from session (dev reset). */
+export function clearSavedNetworks(): void {
+  sessionStorage.removeItem(SESSION_KEY);
+}

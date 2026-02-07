@@ -1,5 +1,6 @@
 import { User, Bell, Settings } from 'lucide-react';
 import { clearWalletSession, getWalletSession } from '../../../utils/walletSession'; // TODO: Remove clearWalletSession
+import { clearSavedNetworks } from '../../../utils/networkSession';
 import { formatShortAddress } from '../../../utils/walletUtils';
 
 export function TopBar() {
@@ -42,7 +43,7 @@ export function TopBarWithSettings({ onOpenSettings }: { onOpenSettings: () => v
             <User className="w-4 h-4 text-white" />
           </button>
           <div className="font-semibold text-sm text-stone-800 font-mono">{displayAddress}</div>
-          {/* TODO: Remove this */}
+          {/* TODO: Remove these dev buttons */}
           <button
             type="button"
             onClick={() => {
@@ -53,6 +54,17 @@ export function TopBarWithSettings({ onOpenSettings }: { onOpenSettings: () => v
             title="Clear encrypted login & account pk (dev)"
           >
             PK Reset
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              clearSavedNetworks();
+              window.location.reload();
+            }}
+            className="rounded px-2 py-1 text-[10px] font-medium bg-amber-200 text-amber-900 hover:bg-amber-300"
+            title="Clear saved networks (dev)"
+          >
+            Network Reset
           </button>
         </div>
 
