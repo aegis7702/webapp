@@ -1,17 +1,46 @@
-import { useState } from 'react';
-import { Shield, Loader2, CheckCircle2, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Loader2, CheckCircle2, Copy, Check, XCircle } from 'lucide-react';
 import { UnifiedModal } from '../aegis/UnifiedModal';
+import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
+import { getLoginPasswordInMemory } from '../../../utils/authMemory';
+import { getSelectedNetwork, isDelegatedToImplementation } from '../../../utils/tokenSession';
+import { sendEIP7702ApplyTransaction } from '../../../utils/eip7702';
 
 type AegisStatus = 'not-applied' | 'applied';
-type ModalStep = 'confirmation' | 'executing' | 'success' | null;
+type ModalStep = 'confirmation' | 'executing' | 'success' | 'failure' | null;
 
 // Official Aegis Implementation Contract
-const AEGIS_CONTRACT_ADDRESS = '0x45715e7E41098de7B1726a7a182268da4aEB9804';
+const AEGIS_CONTRACT_ADDRESS = '0x2f7bB54E59DadC1f593FAea2c84092825Fd0533B';
 
 export function AegisSetup() {
   const [status, setStatus] = useState<AegisStatus>('not-applied');
+  const [statusCheckLoading, setStatusCheckLoading] = useState(true);
   const [modalStep, setModalStep] = useState<ModalStep>(null);
   const [copied, setCopied] = useState(false);
+  const [txError, setTxError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+
+  useEffect(() => {
+    const session = getWalletSession();
+    const network = getSelectedNetwork();
+    if (!session?.address || !network?.rpcUrl) {
+      setStatusCheckLoading(false);
+      return;
+    }
+    let cancelled = false;
+    isDelegatedToImplementation(session.address, network.rpcUrl, AEGIS_CONTRACT_ADDRESS)
+      .then((delegated) => {
+        if (!cancelled) {
+          setStatus(delegated ? 'applied' : 'not-applied');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setStatusCheckLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCopyAddress = () => {
     navigator.clipboard.writeText(AEGIS_CONTRACT_ADDRESS);
@@ -21,24 +50,67 @@ export function AegisSetup() {
 
   const handleApplyClick = () => {
     setModalStep('confirmation');
+    setTxError(null);
   };
 
-  const handleConfirmApply = () => {
+  const handleConfirmApply = async () => {
+    setTxError(null);
+    const session = getWalletSession();
+    const network = getSelectedNetwork();
+    if (!session?.encryptedPk) {
+      setTxError('Wallet session not found. Please log in again.');
+      return;
+    }
+    if (!network?.rpcUrl) {
+      setTxError('No network selected. Choose a network in Settings.');
+      return;
+    }
+    const password = getLoginPasswordInMemory();
+    if (!password) {
+      setTxError('Session expired. Please log out and log in again to sign transactions.');
+      return;
+    }
+
     setModalStep('executing');
-    
-    // Simulate EIP-7702 delegated transaction
-    setTimeout(() => {
+    let privateKey: string;
+    try {
+      privateKey = await decryptPrivateKey(session.encryptedPk, password);
+    } catch {
+      setModalStep('confirmation');
+      setTxError('Decryption failed. Please log out and log in again.');
+      return;
+    }
+
+    const result = await sendEIP7702ApplyTransaction({
+      privateKey,
+      rpcUrl: network.rpcUrl,
+      chainId: network.chainId,
+      contractAddress: AEGIS_CONTRACT_ADDRESS,
+    });
+
+    if (result.success) {
+      setTxHash(result.txHash);
       setModalStep('success');
-    }, 2000);
+    } else {
+      setTxError(result.error);
+      setModalStep('failure');
+    }
   };
 
   const handleCancel = () => {
     setModalStep(null);
+    setTxError(null);
   };
 
   const handleSuccess = () => {
     setStatus('applied');
     setModalStep(null);
+    setTxHash(null);
+  };
+
+  const handleDismissFailure = () => {
+    setModalStep('confirmation');
+    setTxError(null);
   };
 
   // Shared Contract Address Display Component
@@ -68,7 +140,18 @@ export function AegisSetup() {
     </div>
   );
 
-  // State 1: Not Applied
+  if (statusCheckLoading) {
+    return (
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 mb-6">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-8 h-8 text-stone-400 animate-spin" />
+          <span className="ml-2 text-sm text-stone-500">Checking delegation status…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // State 1: Not Applied — show Aegis Security Implementation (Apply) screen
   if (status === 'not-applied') {
     return (
       <>
@@ -132,7 +215,7 @@ export function AegisSetup() {
                 Cancel
               </button>
               <button
-                onClick={handleConfirmApply}
+                onClick={() => void handleConfirmApply()}
                 className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors"
               >
                 Yes, Apply
@@ -170,6 +253,9 @@ export function AegisSetup() {
                 Your address will be secured by the Aegis implementation, enabling security analysis and monitoring for all delegated executions.
               </p>
             </div>
+            {txError && modalStep === 'confirmation' && (
+              <p className="text-sm text-red-600">{txError}</p>
+            )}
           </div>
         </UnifiedModal>
 
@@ -213,15 +299,52 @@ export function AegisSetup() {
               </div>
             </div>
             
-            <p className="text-sm text-stone-700 leading-relaxed text-center">
+            <p className="text-sm text-stone-700 leading-relaxed">
               The Aegis implementation has been successfully applied to your address.
             </p>
             
             <ContractAddressDisplay showLabel={false} />
             
-            <p className="text-sm text-stone-700 leading-relaxed text-center">
+            <p className="text-sm text-stone-700 leading-relaxed">
               Your address is now secured by the Aegis implementation. Delegated executions will be monitored and analyzed.
             </p>
+            {txHash && (
+              <p className="text-xs text-stone-500 font-mono break-all">
+                Tx: {txHash}
+              </p>
+            )}
+          </div>
+        </UnifiedModal>
+
+        {/* Failure Modal */}
+        <UnifiedModal
+          isOpen={modalStep === 'failure'}
+          onClose={handleDismissFailure}
+          fullScreen
+          title="Transaction failed"
+          footer={
+            <button
+              onClick={handleDismissFailure}
+              className="w-full bg-stone-800 text-white py-3 rounded-xl font-semibold hover:bg-stone-700 transition-colors"
+            >
+              Try again
+            </button>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex flex-col items-center justify-center py-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-3">
+                <XCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <p className="text-sm text-stone-700 text-center">
+                The EIP-7702 transaction could not be completed.
+              </p>
+            </div>
+            {txError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-xs text-red-900 break-words">{txError}</p>
+              </div>
+            )}
           </div>
         </UnifiedModal>
       </>
@@ -259,11 +382,11 @@ export function AegisSetup() {
           </p>
 
           {/* Status Line */}
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-orange-200">
+          {/* <div className="flex items-center gap-2 mt-3 pt-3 border-t border-orange-200">
             <p className="text-sm text-stone-700">
               <span className="font-medium">Status:</span> <span className="text-orange-700 font-semibold">Active</span>
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

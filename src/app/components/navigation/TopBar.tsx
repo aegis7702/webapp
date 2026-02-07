@@ -1,5 +1,6 @@
 import { User, Bell, Settings } from 'lucide-react';
-import { clearWalletSession, getWalletSession } from '../../../utils/walletSession'; // TODO: Remove clearWalletSession
+import { clearWalletSession, getWalletSession } from '../../../utils/walletSession';
+import { clearLoginPasswordInMemory } from '../../../utils/authMemory'; // TODO: Remove clearWalletSession
 import { clearSavedNetworks } from '../../../utils/networkSession';
 import { formatShortAddress } from '../../../utils/walletUtils';
 
@@ -55,6 +56,7 @@ export function TopBarWithSettings({
           <button
             type="button"
             onClick={() => {
+              clearLoginPasswordInMemory();
               clearWalletSession();
               window.location.reload();
             }}

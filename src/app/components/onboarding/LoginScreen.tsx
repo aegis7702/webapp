@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Shield } from 'lucide-react';
 import { verifyPassword } from '../../../utils/walletSession';
+import { setLoginPasswordInMemory } from '../../../utils/authMemory';
 
 export function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState('');
@@ -10,6 +11,7 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
     setError('');
     const ok = await verifyPassword(password);
     if (ok) {
+      setLoginPasswordInMemory(password);
       onLogin();
     } else {
       setError('Incorrect password. Please try again.');

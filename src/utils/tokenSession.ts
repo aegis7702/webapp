@@ -82,30 +82,115 @@ export function addSavedToken(chainId: string, token: SavedToken): void {
 }
 
 /**
- * Fetch ERC20 symbol and name via rpcBatchCall (one batch, two eth_call).
+ * One batch: ERC20 symbol + name (eth_call x2) and account code (eth_getCode).
+ * Use when you need token metadata and/or account code in a single RPC round-trip.
+ */
+export async function fetchTokenSymbolNameAndAccountCode(
+  tokenAddress: string,
+  accountAddress: string,
+  rpcUrl: string
+): Promise<{
+  symbol: string | null;
+  name: string | null;
+  accountCode: string | null;
+}> {
+  const tokenAddr = tokenAddress.trim();
+  const accountAddr = accountAddress.trim();
+  const url = rpcUrl.trim();
+  if (!url) return { symbol: null, name: null, accountCode: null };
+  if (!tokenAddr && !accountAddr) return { symbol: null, name: null, accountCode: null };
+
+  const requests: import('./rpcBatch').BatchItem[] = [];
+  if (tokenAddr) {
+    requests.push(
+      { jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: tokenAddr, data: SELECTOR_SYMBOL }, 'latest'] },
+      { jsonrpc: '2.0', id: 2, method: 'eth_call', params: [{ to: tokenAddr, data: SELECTOR_NAME }, 'latest'] }
+    );
+  }
+  if (accountAddr) {
+    requests.push(
+      { jsonrpc: '2.0', id: 3, method: 'eth_getCode', params: [accountAddr, 'latest'] }
+    );
+  }
+  if (requests.length === 0) return { symbol: null, name: null, accountCode: null };
+
+  try {
+    const responses = await rpcBatchCall(url, requests);
+    let symbol: string | null = null;
+    let name: string | null = null;
+    let accountCode: string | null = null;
+    let idx = 0;
+    if (tokenAddr) {
+      const symbolHex = responses[idx]?.error == null && typeof responses[idx]?.result === 'string' ? (responses[idx].result as string) : null;
+      const nameHex = responses[idx + 1]?.error == null && typeof responses[idx + 1]?.result === 'string' ? (responses[idx + 1].result as string) : null;
+      symbol = symbolHex ? decodeAbiString(symbolHex) : null;
+      name = nameHex ? decodeAbiString(nameHex) : null;
+      idx += 2;
+    }
+    if (accountAddr) {
+      accountCode = responses[idx]?.error == null && typeof responses[idx]?.result === 'string' ? (responses[idx].result as string) ?? null : null;
+    }
+    return { symbol, name, accountCode };
+  } catch {
+    return { symbol: null, name: null, accountCode: null };
+  }
+}
+
+/**
+ * Fetch ERC20 symbol and name via batch (uses fetchTokenSymbolNameAndAccountCode).
  */
 export async function fetchTokenSymbolAndName(
   address: string,
   rpcUrl: string
 ): Promise<{ symbol: string | null; name: string | null }> {
-  const addr = address.trim();
-  const url = rpcUrl.trim();
-  if (!addr || !url) return { symbol: null, name: null };
-  const requests = [
-    { jsonrpc: '2.0' as const, id: 1, method: 'eth_call' as const, params: [{ to: addr, data: SELECTOR_SYMBOL }, 'latest'] },
-    { jsonrpc: '2.0' as const, id: 2, method: 'eth_call' as const, params: [{ to: addr, data: SELECTOR_NAME }, 'latest'] },
-  ];
-  try {
-    const responses = await rpcBatchCall(url, requests);
-    const symbolHex = responses[0]?.error == null && typeof responses[0]?.result === 'string' ? responses[0].result : null;
-    const nameHex = responses[1]?.error == null && typeof responses[1]?.result === 'string' ? responses[1].result : null;
-    return {
-      symbol: symbolHex ? decodeAbiString(symbolHex) : null,
-      name: nameHex ? decodeAbiString(nameHex) : null,
-    };
-  } catch {
-    return { symbol: null, name: null };
-  }
+  const { symbol, name } = await fetchTokenSymbolNameAndAccountCode(address, '', rpcUrl);
+  return { symbol, name };
+}
+
+/** EIP-7702 delegation indicator prefix (banned opcode 0xef + version 0x0100). */
+const EIP7702_DELEGATION_PREFIX = '0xef0100';
+
+/**
+ * Fetch account code at address via batch (uses fetchTokenSymbolNameAndAccountCode).
+ * @returns 0x-prefixed hex string or null on error/empty
+ */
+export async function fetchAccountCode(
+  address: string,
+  rpcUrl: string
+): Promise<string | null> {
+  const { accountCode } = await fetchTokenSymbolNameAndAccountCode('', address, rpcUrl);
+  return accountCode;
+}
+
+/**
+ * Normalize address to 20-byte hex (0x + 40 chars lowercase).
+ */
+function normalizeAddress20(addr: string): string {
+  const hex = addr.startsWith('0x') ? addr.slice(2).toLowerCase() : addr.toLowerCase();
+  return '0x' + hex.padStart(40, '0').slice(-40);
+}
+
+/**
+ * Check if account code is EIP-7702 delegation to the given implementation address.
+ * Delegation indicator is 0xef0100 || address (20 bytes).
+ */
+export function isEip7702DelegationTo(code: string | null, implementationAddress: string): boolean {
+  if (!code || typeof code !== 'string' || !code.startsWith('0x')) return false;
+  const implHex = normalizeAddress20(implementationAddress).slice(2);
+  const expected = EIP7702_DELEGATION_PREFIX + implHex;
+  return code.toLowerCase() === expected.toLowerCase();
+}
+
+/**
+ * Fetch user account code and return whether it is delegated to the given implementation (EIP-7702).
+ */
+export async function isDelegatedToImplementation(
+  userAddress: string,
+  rpcUrl: string,
+  implementationAddress: string
+): Promise<boolean> {
+  const code = await fetchAccountCode(userAddress, rpcUrl);
+  return isEip7702DelegationTo(code, implementationAddress);
 }
 
 /**
