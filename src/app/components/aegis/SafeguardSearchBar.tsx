@@ -1,13 +1,25 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Search } from 'lucide-react';
+import { DEFAULT_NETWORKS } from '../../../config/netwotk';
+import { getSavedNetworks } from '../../../utils/networkSession';
+import { getSelectedNetwork, setSelectedNetwork as persistSelectedNetwork } from '../../../utils/tokenSession';
 import { NetworkSelector } from './NetworkSelector';
 
 export function AegisSearchArea({ onSearch }: { onSearch: (network: string, address: string) => void }) {
-  const [selectedNetwork, setSelectedNetwork] = useState('Ethereum');
+  const networkList = [...DEFAULT_NETWORKS, ...getSavedNetworks()];
+  const networkNames = networkList.map((n) => n.name);
+  const sessionNetwork = getSelectedNetwork();
+  const [selectedNetwork, setSelectedNetwork] = useState(
+    () => sessionNetwork?.name ?? networkNames[0] ?? ''
+  );
   const [searchAddress, setSearchAddress] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  const networks = ['Ethereum', 'Polygon', 'Arbitrum', 'Optimism'];
+  const handleNetworkChange = (name: string) => {
+    setSelectedNetwork(name);
+    const net = networkList.find((n) => n.name === name);
+    if (net) persistSelectedNetwork(net);
+  };
 
   const handleSearch = () => {
     setIsSearching(true);
@@ -29,8 +41,8 @@ export function AegisSearchArea({ onSearch }: { onSearch: (network: string, addr
         {/* Network Selector - Custom UI */}
         <NetworkSelector
           value={selectedNetwork}
-          onChange={setSelectedNetwork}
-          networks={networks}
+          onChange={handleNetworkChange}
+          networks={networkNames}
         />
 
         {/* Search Input */}

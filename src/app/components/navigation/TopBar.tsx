@@ -31,7 +31,15 @@ export function TopBar() {
   );
 }
 
-export function TopBarWithSettings({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function TopBarWithSettings({ 
+  onOpenSettings,
+  onOpenNotifications,
+  hasUnreadNotifications 
+}: { 
+  onOpenSettings: () => void;
+  onOpenNotifications: () => void;
+  hasUnreadNotifications: boolean;
+}) {
   const session = getWalletSession();
   const displayAddress = session?.address ? formatShortAddress(session.address) : 'Account 1';
   return (
@@ -68,12 +76,18 @@ export function TopBarWithSettings({ onOpenSettings }: { onOpenSettings: () => v
           </button>
         </div>
 
-        {/* Right side: Notification, Dev Reset, and Settings */}
+        {/* Right side: Notification and Settings */}
         <div className="flex items-center gap-3">
-          <button className="flex items-center justify-center w-8 h-8 bg-stone-100 rounded-full hover:bg-stone-200 transition-colors">
+          <button 
+            onClick={onOpenNotifications}
+            className="relative flex items-center justify-center w-8 h-8 bg-stone-100 rounded-full hover:bg-stone-200 transition-colors"
+          >
+            <Bell className="w-4 h-4 text-stone-600" />
+            {hasUnreadNotifications && (
+              <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white" />
+            )}
           </button>
-          <Bell className="w-4 h-4 text-stone-600" />
-          <button
+          <button 
             onClick={onOpenSettings}
             className="flex items-center justify-center w-8 h-8 bg-stone-100 rounded-full hover:bg-stone-200 transition-colors"
           >
