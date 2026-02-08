@@ -471,6 +471,7 @@ export function AegisContent() {
         isOpen={showDeactivateModal}
         onClose={() => setShowDeactivateModal(false)}
         title="Deactivate Implementation"
+        fullScreen
         footer={
           <div className="flex flex-col sm:flex-row gap-3">
             <button
