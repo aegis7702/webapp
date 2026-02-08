@@ -1,10 +1,32 @@
-import { useState } from 'react';
-import { AlertTriangle, Shield, X } from 'lucide-react';
-import { AgentChat } from '../aegis/AgentChat';
+import React, { useState, useEffect } from 'react';
+import { AlertTriangle, X } from 'lucide-react';
 import { TransactionDetailPage } from './TransactionDetailPage';
 import { Transaction } from '../../../types';
+import { fetchRecentTxsWithNotes, type RecentTxWithNote } from '../../../utils/activitySession';
+import { getSelectedNetwork } from '../../../utils/tokenSession';
+import { getWalletSession } from '../../../utils/walletSession';
 
-// Utility function to format time with relative time if within 10 minutes
+/** Format time from Unix seconds (bigint or number). */
+function formatTimeFromUnix(unixSeconds: bigint | number): string {
+  const ms = Number(unixSeconds) * 1000;
+  const timestamp = new Date(ms);
+  const now = new Date();
+  const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60));
+  const year = timestamp.getFullYear();
+  const month = String(timestamp.getMonth() + 1).padStart(2, '0');
+  const day = String(timestamp.getDate()).padStart(2, '0');
+  const hours = String(timestamp.getHours()).padStart(2, '0');
+  const minutes = String(timestamp.getMinutes()).padStart(2, '0');
+  const seconds = String(timestamp.getSeconds()).padStart(2, '0');
+  const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  if (diffInMinutes < 10) {
+    if (diffInMinutes === 0) return `${formattedTime} (just now)`;
+    if (diffInMinutes === 1) return `${formattedTime} (1 minute ago)`;
+    return `${formattedTime} (${diffInMinutes} minutes ago)`;
+  }
+  return formattedTime;
+}
+
 const formatTime = (timestamp: Date): string => {
   const now = new Date();
   const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60));
@@ -33,110 +55,81 @@ const formatTime = (timestamp: Date): string => {
   return formattedTime;
 };
 
+/** Map API result to Transaction. When isFrozen, the most recent tx (index 0) gets freezeAction. */
+function mapToTransaction(
+  item: RecentTxWithNote,
+  index: number,
+  isFrozen: boolean,
+  freezeReason: string | null
+): Transaction {
+  const txHash = item.txHash.startsWith('0x') ? item.txHash : '0x' + item.txHash;
+  const note = item.note;
+  const updatedAt = note?.updatedAt ?? 0n;
+  const timeStr =
+    updatedAt > 0n
+      ? formatTimeFromUnix(updatedAt)
+      : formatTime(new Date());
+  const isMostRecent = index === 0;
+  const showFrozen = isFrozen && isMostRecent && freezeReason != null && freezeReason !== '';
+  return {
+    id: txHash,
+    action: note?.name?.trim() || 'Transaction',
+    time: timeStr,
+    amount: note?.summary?.trim() || '—',
+    type: 'eip7702',
+    status: 'success',
+    is7702: true,
+    implementationName: note?.name?.trim() || undefined,
+    delegatedExecution: true,
+    monitoringStatus: showFrozen ? 'anomaly-detected' : 'monitored',
+    hash: txHash,
+    executionPath: note?.reasons?.trim() || undefined,
+    postExecutionData: note
+      ? {
+          eventsMonitored: [],
+          stateChanges: note.description?.trim() ? [note.description.trim()] : [],
+          anomalyDetected: showFrozen,
+          riskLevel: showFrozen ? 'critical' : 'none',
+          riskDescription: showFrozen ? freezeReason ?? undefined : undefined,
+        }
+      : undefined,
+    ...(showFrozen &&
+      freezeReason && {
+        freezeAction: {
+          isFrozen: true,
+          freezeReason,
+          frozenBy: 'Sentinel (this transaction)',
+          frozenAt: 'Due to this transaction',
+        },
+      }),
+  };
+}
+
 export function ActivityContent() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showMonitoringBanner, setShowMonitoringBanner] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock transaction data with EIP-7702 scenarios
-  const now = new Date();
-  const transactions: Transaction[] = [
-    {
-      id: '1',
-      action: 'Batch Execute',
-      time: formatTime(new Date(now.getTime() - 3 * 60 * 1000)), // 3 minutes ago
-      amount: '0.05',
-      tokenSymbol: 'ETH',
-      to: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
-      type: 'eip7702',
-      status: 'success',
-      is7702: true,
-      implementationName: 'ModuleC7702',
-      delegatedExecution: true,
-      monitoringStatus: 'anomaly-detected',
-      hash: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
-      executionPath: 'batchExecute() → maliciousPath()',
-      postExecutionData: {
-        eventsMonitored: [
-          'ExecutionStarted(0x742d35...)',
-          'MaliciousPathCalled(0x742d35...)',
-          'WalletLockInitiated(0x742d35...)'
-        ],
-        stateChanges: [
-          'Wallet state changed to LOCKED',
-          'Emergency mode activated',
-          'All outgoing transactions blocked'
-        ],
-        anomalyDetected: true,
-        riskLevel: 'critical',
-        riskDescription: 'Potential DoS risk detected'
-      },
-      freezeAction: {
-        isFrozen: true,
-        freezeReason: 'Malicious execution path detected',
-        frozenBy: 'Sentinel (0x8f3Cf...)',
-        frozenAt: '3 minutes ago'
-      }
-    },
-    {
-      id: '2',
-      action: 'Delegated Transfer',
-      time: formatTime(new Date(now.getTime() - 15 * 60 * 1000)), // 15 minutes ago
-      amount: '120',
-      tokenSymbol: 'USDC',
-      to: '0x1234567890abcdef1234567890abcdef12345678',
-      type: 'eip7702',
-      status: 'success',
-      is7702: true,
-      implementationName: 'ModuleC7702',
-      delegatedExecution: true,
-      monitoringStatus: 'monitored',
-      hash: '0x9a3f85Dc7734B1623826e4b844Bc9e7595f1cFd2',
-      executionPath: 'transfer() → normalPath()',
-      postExecutionData: {
-        eventsMonitored: [
-          'ExecutionStarted(0x9a3f85...)',
-          'Transfer(from: 0x9a3f85..., to: 0x1234..., value: 120)',
-          'ExecutionCompleted(0x9a3f85...)'
-        ],
-        stateChanges: [
-          'Balance updated: -120 USDC',
-          'Nonce incremented: 45 → 46'
-        ],
-        anomalyDetected: false,
-        riskLevel: 'none'
-      }
-    },
-    {
-      id: '3',
-      action: 'Send',
-      time: formatTime(new Date(now.getTime() - 60 * 60 * 1000)), // 1 hour ago
-      amount: '0.5',
-      tokenSymbol: 'ETH',
-      to: '0xabcdef1234567890abcdef1234567890abcdef12',
-      type: 'send',
-      status: 'failed'
-    },
-    {
-      id: '4',
-      action: 'Receive',
-      time: formatTime(new Date(now.getTime() - 3 * 60 * 60 * 1000)), // 3 hours ago
-      amount: '500',
-      tokenSymbol: 'USDC',
-      to: '0x0000000000000000000000000000000000000000', // Self
-      type: 'receive',
-      status: 'success'
-    },
-    {
-      id: '5',
-      action: 'Swap',
-      time: formatTime(new Date(now.getTime() - 24 * 60 * 60 * 1000)), // 1 day ago
-      amount: '0.4 ETH → 1,000 USDC',
-      tokenSymbol: 'ETH',
-      to: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', // Uniswap Router
-      type: 'swap',
-      status: 'pending'
-    },
-  ];
+  useEffect(() => {
+    const rpcUrl = getSelectedNetwork()?.rpcUrl;
+    const walletAddress = getWalletSession()?.address;
+    if (!rpcUrl) {
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    fetchRecentTxsWithNotes(rpcUrl, walletAddress)
+      .then(({ txs, isFrozen, freezeReason }) => {
+        const list = txs.map((item, index) =>
+          mapToTransaction(item, index, isFrozen, freezeReason)
+        );
+        setTransactions(list);
+      })
+      .catch(() => setTransactions([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleTransactionClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -155,6 +148,21 @@ export function ActivityContent() {
     <div className="flex-1 overflow-y-auto bg-stone-50 relative">
       <div className="px-6 md:px-12 py-8 md:py-12 max-w-4xl mx-auto w-full">
         <h2 className="text-xl font-bold mb-6 text-stone-900">Transaction History</h2>
+
+        {/* Frozen banner: most recent tx caused freeze */}
+        {transactions.length > 0 && transactions[0]?.freezeAction?.isFrozen && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-sm text-red-900">Wallet frozen</h3>
+                <p className="text-xs text-red-800 mt-1">
+                  Frozen due to the most recent transaction. {transactions[0].freezeAction.freezeReason}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Dismissible Monitoring Banner */}
         {showMonitoringBanner && (
@@ -179,6 +187,16 @@ export function ActivityContent() {
           </div>
         )}
 
+        {loading ? (
+          <div className="py-12 text-center">
+            <p className="text-sm text-stone-500">Loading transactions…</p>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="py-12 text-center bg-white rounded-xl border border-stone-200">
+            <p className="text-sm text-stone-500">No transactions yet</p>
+            <p className="text-xs text-stone-400 mt-1">Activity will appear here when you use Aegis.</p>
+          </div>
+        ) : (
         <div className="space-y-3">
           {transactions.map((item) => (
             <button
@@ -265,6 +283,7 @@ export function ActivityContent() {
             </button>
           ))}
         </div>
+        )}
       </div>
 
       {/* Agent Chat Component */}
