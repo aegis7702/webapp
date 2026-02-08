@@ -4,7 +4,7 @@ import { UnifiedModal } from '../aegis/UnifiedModal';
 import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
 import { getLoginPasswordInMemory } from '../../../utils/authMemory';
 import { getSelectedNetwork, isDelegatedToImplementation } from '../../../utils/tokenSession';
-import { sendEIP7702ApplyTransaction } from '../../../utils/eip7702';
+import { sendEIP7702ApplyTransaction, sendEIP7702ApplyTransactionAndSetSentinel } from '../../../utils/eip7702';
 import config from '../../../config/address.json';
 
 type AegisStatus = 'not-applied' | 'applied';
@@ -82,12 +82,20 @@ export function AegisSetup() {
       return;
     }
 
-    const result = await sendEIP7702ApplyTransaction({
+    // const result = await sendEIP7702ApplyTransaction({
+    //   privateKey,
+    //   rpcUrl: network.rpcUrl,
+    //   chainId: network.chainId,
+    //   contractAddress: AEGIS_CONTRACT_ADDRESS,
+    // });
+    const result = await sendEIP7702ApplyTransactionAndSetSentinel({
       privateKey,
       rpcUrl: network.rpcUrl,
       chainId: network.chainId,
       contractAddress: AEGIS_CONTRACT_ADDRESS,
-    });
+    },
+    config.SentinelAddress as `0x${string}`
+  );
 
     if (result.success) {
       setTxHash(result.txHash);

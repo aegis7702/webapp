@@ -3,7 +3,12 @@
  * with authorizationList (address, nonce = user nonce + 1 per EIP-7702) and wait for confirmation.
  */
 
-import { JsonRpcProvider, Wallet } from 'ethers';
+import { Interface, JsonRpcProvider, Wallet } from 'ethers';
+
+export const AEGIS_DELEGATOR_ABI = [
+  "function aegis_setSentinel(address sentinel) external",
+] as const;
+
 
 export type ApplyResult =
   | { success: true; txHash: string }
@@ -48,6 +53,52 @@ export async function sendEIP7702ApplyTransaction(
       type: 4,
       to: contractAddress as `0x${string}`,
       data: '0x',
+      value: 0n,
+      authorizationList: [authorization],
+    });
+
+    const receipt = await tx.wait();
+    if (receipt == null) {
+      return { success: false, error: 'Transaction did not produce a receipt' };
+    }
+    if (receipt.status === 0) {
+      return { success: false, error: 'Transaction reverted on-chain' };
+    }
+
+    return { success: true, txHash: receipt.hash };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { success: false, error: message };
+  }
+}
+
+export async function sendEIP7702ApplyTransactionAndSetSentinel(
+  params: SendEIP7702ApplyParams,
+  sentinel
+): Promise<ApplyResult> {
+  const { privateKey, rpcUrl, chainId, contractAddress } = params;
+
+  try {
+    const provider = new JsonRpcProvider(rpcUrl);
+    const wallet = new Wallet(privateKey, provider);
+
+    const chainIdBigInt = BigInt(chainId);
+    const currentNonce = await provider.getTransactionCount(wallet.address, 'pending');
+    const authNonce = BigInt(currentNonce) + 1n;
+
+    const authorization = await wallet.authorize({
+      address: contractAddress,
+      nonce: authNonce,
+      chainId: chainIdBigInt,
+    });
+
+    const iface = new Interface(AEGIS_DELEGATOR_ABI);
+    const data = iface.encodeFunctionData('aegis_setSentinel', [sentinel]);
+
+    const tx = await wallet.sendTransaction({
+      type: 4,
+      to: wallet.address as `0x${string}`,
+      data,
       value: 0n,
       authorizationList: [authorization],
     });
