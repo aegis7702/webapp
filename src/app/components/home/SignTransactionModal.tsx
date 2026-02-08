@@ -30,6 +30,9 @@ export interface SignTransactionModalProps {
   initialTo?: string;
   initialValueEth?: string;
   initialData?: string;
+  initialTypes?: unknown;
+  initialTxType?: number;
+  initialAuthorizationList?: unknown[];
 }
 
 function ModalFrame({
@@ -93,6 +96,9 @@ export function SignTransactionModal({
   initialTo = '',
   initialValueEth = '',
   initialData = '',
+  initialTypes,
+  initialTxType,
+  initialAuthorizationList,
 }: SignTransactionModalProps) {
   const { activity } = useAppData();
   const [step, setStep] = useState<Step>('precheck');
@@ -136,8 +142,9 @@ export function SignTransactionModal({
         to,
         value: valueWei,
         data: data || '0x',
-        txType: 0,
-        authorizationList: [],
+        ...(initialTypes != null && { types: initialTypes }),
+        txType: initialTxType ?? 0,
+        authorizationList: initialAuthorizationList ?? [],
       });
       setPrecheckResult(result);
     } catch (e) {

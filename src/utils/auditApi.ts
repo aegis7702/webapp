@@ -114,6 +114,7 @@ export interface TxPrecheckRequest {
   to: string;
   value: string;
   data: string;
+  types?: unknown;
   txType?: number;
   authorizationList?: unknown[];
 }
@@ -151,6 +152,7 @@ export async function txPrecheck(params: TxPrecheckRequest): Promise<TxPrecheckR
       to: params.to,
       value: params.value ?? '0',
       data: params.data ?? '0x',
+      ...(params.types != null && { types: params.types }),
       txType: params.txType ?? 0,
       authorizationList: params.authorizationList ?? [],
     }),

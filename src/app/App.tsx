@@ -153,8 +153,15 @@ function MainAppLayout({
         />
       )}
       {pendingExternalRequest?.method === 'eth_sendTransaction' && pendingExternalRequest.params[0] ? (() => {
-        // EIP-1193: params = [tx] with tx = { to, value? (hex wei), data? (hex), gas?, gasPrice?, chainId?, ... }
-        const tx = pendingExternalRequest.params[0] as { to?: string; value?: string; data?: string };
+        // EIP-1193: params = [tx] with tx = { to, value?, data?, gas?, gasPrice?, chainId?, types?, txType?, authorizationList?, ... }
+        const tx = pendingExternalRequest.params[0] as {
+          to?: string;
+          value?: string;
+          data?: string;
+          types?: unknown;
+          txType?: number;
+          authorizationList?: unknown[];
+        };
         const chrome = (window as Window & { chrome?: { runtime?: { sendMessage: (msg: unknown, cb?: (r: unknown) => void) => void } } }).chrome;
         return (
           <SignTransactionModal
@@ -162,6 +169,9 @@ function MainAppLayout({
             initialTo={tx.to ?? ''}
             initialValueEth={weiHexToEth(tx.value ?? '0x0')}
             initialData={tx.data ?? '0x'}
+            initialTypes={tx.types}
+            initialTxType={tx.txType}
+            initialAuthorizationList={tx.authorizationList}
             onResolve={(id, result) => {
               chrome?.runtime?.sendMessage?.({ type: 'resolveRequest', id, result, error: null });
               setPendingExternalRequest(null);

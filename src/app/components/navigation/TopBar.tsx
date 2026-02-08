@@ -53,7 +53,7 @@ export function TopBarWithSettings({
           </button>
           <div className="font-semibold text-sm text-stone-800 font-mono">{displayAddress}</div>
           {/* TODO: Remove these dev buttons */}
-          <button
+          {/* <button
             type="button"
             onClick={() => {
               clearLoginPasswordInMemory();
@@ -75,7 +75,7 @@ export function TopBarWithSettings({
             title="Clear saved networks (dev)"
           >
             NT R
-          </button>
+          </button> */}
         </div>
 
         {/* Right side: Notification and Settings */}
