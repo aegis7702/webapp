@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, ChevronRight } from 'lucide-react';
+import { X, ChevronRight, Copy, Check } from 'lucide-react';
 import { DEFAULT_NETWORKS } from '../../../config/netwotk';
 import { getSavedNetworks } from '../../../utils/networkSession';
 import {
@@ -18,7 +18,19 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [showApiKeyManagement, setShowApiKeyManagement] = useState(false);
   const [showAddNetwork, setShowAddNetwork] = useState(false);
+  const [copied, setCopied] = useState(false);
   const savedNetworks = getSavedNetworks();
+
+  const handleCopyAddress = async () => {
+    if (!session?.address) return;
+    try {
+      await navigator.clipboard.writeText(session.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
   const networks = [...DEFAULT_NETWORKS, ...savedNetworks];
   const [selectedNetwork, setSelectedNetwork] = useState(
     () => getSelectedNetwork()?.name ?? DEFAULT_NETWORKS[0]?.name ?? ''
@@ -59,9 +71,26 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           <div className="mt-6">
             <h2 className="px-6 text-xs font-semibold text-stone-500 uppercase mb-2">Account</h2>
             <div className="bg-white border-y border-stone-200">
-              <div className="px-6 py-4">
-                <p className="text-sm font-medium text-stone-900 mb-1">My Wallet</p>
-                <p className="text-xs text-stone-500 font-mono">{displayAddress}</p>
+              <div className="px-6 py-4 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-stone-900 mb-1">My Wallet</p>
+                  <p className="text-xs text-stone-500 font-mono break-all">{displayAddress}</p>
+                </div>
+                {session?.address && (
+                  <button
+                    type="button"
+                    onClick={handleCopyAddress}
+                    className="shrink-0 p-2 rounded-lg hover:bg-stone-100 transition-colors text-stone-500 hover:text-stone-700"
+                    title="Copy address"
+                    aria-label="Copy address"
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           </div>
