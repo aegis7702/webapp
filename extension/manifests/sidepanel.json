@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Aegis Wallet (Side Panel)",
+  "description": "Aegis wallet - opens in side panel",
+  "version": "0.0.1",
+  "action": {
+    "default_title": "Open Aegis Wallet"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["sidePanel"]
+}

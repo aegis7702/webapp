@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "build:extension": "vite build --config vite.extension.config.ts && node scripts/copy-extension.mjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
