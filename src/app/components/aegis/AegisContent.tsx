@@ -528,11 +528,11 @@ export function AegisContent() {
           activateStep === 'confirm'
             ? 'Activate Implementation'
             : activateStep === 'auditing'
-              ? 'Running audit…'
+              ? 'Running audit'
               : activateStep === 'audit-result'
                 ? 'Audit result'
                 : activateStep === 'executing'
-                  ? 'Activating…'
+                  ? 'Activating'
                   : activateStep === 'success'
                     ? 'Activation complete'
                     : 'Activation failed'
@@ -541,7 +541,7 @@ export function AegisContent() {
         fullScreen
         footer={
           activateStep === 'confirm' ? (
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-row sm:flex-row gap-3">
               <button
                 onClick={closeActivateModal}
                 className="flex-1 bg-stone-100 text-stone-800 py-3 rounded-xl font-semibold hover:bg-stone-200 transition-colors"
@@ -556,7 +556,7 @@ export function AegisContent() {
               </button>
             </div>
           ) : activateStep === 'audit-result' && auditApplyResult ? (
-            <div className="flex flex-col-reverse sm:flex-row gap-3">
+            <div className="flex flex-row sm:flex-row gap-3">
               <button
                 onClick={closeActivateModal}
                 className="flex-1 bg-stone-100 text-stone-800 py-3 rounded-xl font-semibold hover:bg-stone-200 transition-colors"
@@ -572,15 +572,20 @@ export function AegisContent() {
                 </button>
               )}
             </div>
-          ) : activateStep === 'success' || activateStep === 'error' ? (
-            <div className="flex justify-end">
-              <button
-                onClick={closeActivateModal}
-                className="px-6 py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors"
-              >
-                Close
-              </button>
-            </div>
+          ) : activateStep === 'success' ? (
+            <button
+              onClick={closeActivateModal}
+              className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+            >
+              Confirm
+            </button>
+          ) : activateStep === 'error' ? (
+            <button
+              onClick={closeActivateModal}
+              className="w-full bg-stone-800 text-white py-3 rounded-xl font-semibold hover:bg-stone-700 transition-colors"
+            >
+              Try again
+            </button>
           ) : undefined
         }
       >
@@ -699,30 +704,44 @@ export function AegisContent() {
           </div>
         )}
         {activateStep === 'success' && activateTxHash && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <CheckCircle2 className="w-16 h-16 text-green-500 mb-6" />
-            <p className="text-stone-800 font-medium">The implementation is now active.</p>
-            <p className="text-sm text-stone-600 mt-2">Transaction hash:</p>
-            {(getSelectedNetwork() ?? DEFAULT_NETWORKS[0])?.blockExplorer ? (
-              <a
-                href={`${(getSelectedNetwork() ?? DEFAULT_NETWORKS[0])!.blockExplorer!.replace(/\/$/, '')}/tx/${activateTxHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-orange-600 hover:underline font-mono text-sm break-all mt-1"
-              >
-                {activateTxHash}
-              </a>
-            ) : (
-              <span className="font-mono text-sm break-all mt-1 text-stone-700">{activateTxHash}</span>
-            )}
-            <p className="text-xs text-stone-500 mt-4">Close this modal to refresh the list.</p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-center py-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              </div>
+            </div>
+            <p className="text-sm text-stone-700 leading-relaxed">
+              The implementation is now active. Delegated executions will use this implementation.
+            </p>
+            <p className="text-xs text-stone-500 font-mono break-all">
+              Tx: {(getSelectedNetwork() ?? DEFAULT_NETWORKS[0])?.blockExplorer ? (
+                <a
+                  href={`${(getSelectedNetwork() ?? DEFAULT_NETWORKS[0])!.blockExplorer!.replace(/\/$/, '')}/tx/${activateTxHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-600 hover:underline"
+                >
+                  {activateTxHash}
+                </a>
+              ) : (
+                activateTxHash
+              )}
+            </p>
           </div>
         )}
         {activateStep === 'error' && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <XCircle className="w-16 h-16 text-red-500 mb-6" />
-            <p className="text-stone-800 font-medium">Something went wrong.</p>
-            <p className="text-sm text-stone-600 mt-2 whitespace-pre-wrap">{activateError ?? 'Unknown error'}</p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-center py-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <XCircle className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+            <p className="text-sm text-stone-700 leading-relaxed font-medium">
+              Something went wrong.
+            </p>
+            <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">
+              {activateError ?? 'Unknown error'}
+            </p>
           </div>
         )}
       </UnifiedModal>
