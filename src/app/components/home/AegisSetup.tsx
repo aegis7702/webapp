@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Loader2, CheckCircle2, Copy, Check, XCircle } from 'lucide-react';
+import { Shield, Loader2, CheckCircle2, Copy, Check, XCircle, MessageCircle } from 'lucide-react';
 import { UnifiedModal } from '../aegis/UnifiedModal';
 import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
 import { getLoginPasswordInMemory } from '../../../utils/authMemory';
@@ -161,7 +161,7 @@ export function AegisSetup() {
             {/* <div className="flex-shrink-0 w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center">
               <Shield className="w-6 h-6 text-orange-500" />
             </div> */}
-            
+
             <div className="flex-1">
               <h3 className="font-semibold text-base text-stone-900 mb-3">
                 Aegis Security Implementation
@@ -169,7 +169,7 @@ export function AegisSetup() {
 
               {/* Contract Address */}
               <ContractAddressDisplay />
-              
+
               {/* Description */}
               <p className="text-sm text-stone-600 mt-3 mb-3 leading-relaxed">
                 Official Aegis implementation used to secure delegated executions and enable security analysis.
@@ -181,7 +181,7 @@ export function AegisSetup() {
                   <span className="font-medium">Status:</span> Not Applied
                 </p>
               </div>
-              
+
               {/* Warning Notice */}
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
                 <p className="text-xs text-amber-900 leading-relaxed">
@@ -267,7 +267,7 @@ export function AegisSetup() {
           title="Applying Aegis Implementation"
           showCloseButton={false}
         >
-          <div className="flex flex-col items-center justify-center py-8">
+          {/* <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
             <p className="text-sm text-stone-700 mb-2">
               Executing delegated transaction…
@@ -275,6 +275,24 @@ export function AegisSetup() {
             <p className="text-xs text-stone-500">
               Please wait while the transaction is processed
             </p>
+          </div> */}
+          <div className="py-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-6">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
+                  <MessageCircle className="w-10 h-10 text-white animate-pulse" />
+                </div>
+                <div className="absolute inset-0 w-20 h-20 bg-orange-400 rounded-full animate-ping opacity-20"></div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-stone-900">
+                  Executing delegated transaction…
+                </p>
+                <p className="text-xs text-stone-600">
+                  This may take a few seconds
+                </p>
+              </div>
+            </div>
           </div>
         </UnifiedModal>
 
@@ -299,13 +317,13 @@ export function AegisSetup() {
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
             </div>
-            
+
             <p className="text-sm text-stone-700 leading-relaxed">
               The Aegis implementation has been successfully applied to your address.
             </p>
-            
+
             <ContractAddressDisplay showLabel={false} />
-            
+
             <p className="text-sm text-stone-700 leading-relaxed">
               Your address is now secured by the Aegis implementation. Delegated executions will be monitored and analyzed.
             </p>
@@ -359,7 +377,7 @@ export function AegisSetup() {
         {/* <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
           <Shield className="w-6 h-6 text-orange-600" />
         </div> */}
-        
+
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3">
             <h3 className="font-semibold text-base text-stone-900">
@@ -373,7 +391,7 @@ export function AegisSetup() {
 
           {/* Contract Address */}
           <ContractAddressDisplay />
-          
+
           {/* Active Status Message */}
           <p className="text-sm text-stone-700 mt-3 mb-1 font-medium">
             Your address is now secured by the Aegis implementation.
