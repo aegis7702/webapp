@@ -2,7 +2,7 @@
  * Centralized data for Home/Aegis/Activity. Fetched once on mount and refreshed every 1 minute.
  */
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Implementation } from '../../types';
 import { fetchAegisBatch, type GetRecordCurrentDecoded } from '../../utils/aegisSession';
 import { fetchRecentTxsWithNotes, type RecentTxWithNote } from '../../utils/activitySession';
@@ -117,11 +117,13 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [activeImpl, setActiveImpl] = useState<Implementation | null>(null);
   const [registeredImpls, setRegisteredImpls] = useState<Implementation[]>([]);
   const [registeredLoading, setRegisteredLoading] = useState(true);
+  const aegisHasLoadedOnceRef = useRef(false);
 
   const [activityTxs, setActivityTxs] = useState<RecentTxWithNote[]>([]);
   const [activityIsFrozen, setActivityIsFrozen] = useState(false);
   const [activityFreezeReason, setActivityFreezeReason] = useState<string | null>(null);
   const [activityLoading, setActivityLoading] = useState(true);
+  const activityHasLoadedOnceRef = useRef(false);
 
   const [ethBalance, setEthBalance] = useState('0');
   const [tokenBalances, setTokenBalances] = useState<{ address: string; symbol: string; balance: string }[]>([]);
@@ -172,7 +174,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setActiveImpl(null);
       return Promise.resolve();
     }
-    setRegisteredLoading(true);
+    if (!aegisHasLoadedOnceRef.current) setRegisteredLoading(true);
     return fetchAegisBatch(rpcUrl, config.ImplSafetyRegistry, config.AegisGuardDelegator, walletAddress)
       .then((result) => {
         if (isZeroOrNullAddress(result.implementationAddress)) {
@@ -203,7 +205,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         setRegisteredImpls([]);
         setActiveImpl(null);
       })
-      .finally(() => setRegisteredLoading(false));
+      .finally(() => {
+        setRegisteredLoading(false);
+        aegisHasLoadedOnceRef.current = true;
+      });
   }, []);
 
   const refetchActivity = useCallback((): Promise<void> => {
@@ -215,7 +220,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setActivityTxs([]);
       return Promise.resolve();
     }
-    setActivityLoading(true);
+    if (!activityHasLoadedOnceRef.current) setActivityLoading(true);
     return fetchRecentTxsWithNotes(rpcUrl, walletAddress)
       .then(({ txs, isFrozen, freezeReason }) => {
         setActivityTxs(txs);
@@ -227,7 +232,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         setActivityIsFrozen(false);
         setActivityFreezeReason(null);
       })
-      .finally(() => setActivityLoading(false));
+      .finally(() => {
+        setActivityLoading(false);
+        activityHasLoadedOnceRef.current = true;
+      });
   }, []);
 
   useEffect(() => {
