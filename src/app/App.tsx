@@ -16,10 +16,92 @@ import { HomeContent } from './components/home/HomeContent';
 import { AegisContent } from './components/aegis/AegisContent';
 import { AgentChat } from './components/aegis/AgentChat';
 import { ActivityContent } from './components/activity/ActivityContent';
-import { AppDataProvider } from './contexts/AppDataContext';
-import { mockNotifications } from '../data/mockNotifications';
+import { AppDataProvider, useAppData } from './contexts/AppDataContext';
+import type { Notification } from '../types/notification';
 
 import { encryptAndSaveWalletSession, getWalletSession } from '../utils/walletSession';
+
+const FROZEN_NOTIFICATION_ID = 'aegis-wallet-frozen';
+
+function buildFrozenNotification(
+  freezeReason: string | null,
+  recentTx: { txHash: string; note: { name?: string; summary?: string } | null } | undefined
+): Notification {
+  const txHashShort = recentTx?.txHash
+    ? `${recentTx.txHash.slice(0, 10)}...${recentTx.txHash.slice(-8)}`
+    : '—';
+  const title = recentTx?.note?.name?.trim() || 'Wallet frozen';
+  const preview = freezeReason?.trim() || 'Your wallet was frozen due to the most recent transaction.';
+  const fullMessage = [
+    preview,
+    '',
+    'Most recent transaction:',
+    `• Tx: ${txHashShort}`,
+    recentTx?.note?.summary?.trim() ? `• ${recentTx.note.summary}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return {
+    id: FROZEN_NOTIFICATION_ID,
+    severity: 'critical',
+    title,
+    preview,
+    fullMessage,
+    timestamp: new Date(),
+    isRead: false,
+  };
+}
+
+function MainAppLayout({
+  activeTab,
+  setActiveTab,
+}: {
+  activeTab: TabType;
+  setActiveTab: (t: TabType) => void;
+}) {
+  const { activity } = useAppData();
+  const { isFrozen, freezeReason, txs } = activity;
+  const [showSettings, setShowSettings] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [freezeNotificationRead, setFreezeNotificationRead] = useState(false);
+
+  const notifications: Notification[] = isFrozen
+    ? [
+        {
+          ...buildFrozenNotification(freezeReason, txs[0]),
+          isRead: freezeNotificationRead,
+        },
+      ]
+    : [];
+  const hasUnreadNotifications = isFrozen && !freezeNotificationRead;
+
+  const handleMarkAsRead = (id: string) => {
+    if (id === FROZEN_NOTIFICATION_ID) setFreezeNotificationRead(true);
+  };
+
+  return (
+    <div className="flex flex-col h-screen max-w-6xl mx-auto bg-stone-50 shadow-xl relative">
+      <TopBarWithSettings
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenNotifications={() => setShowNotifications(true)}
+        hasUnreadNotifications={hasUnreadNotifications}
+      />
+      {activeTab === 'home' && <HomeContent />}
+      {activeTab === 'aegis' && <AegisContent />}
+      {activeTab === 'activity' && <ActivityContent />}
+      <AgentChat />
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      {showSettings && <SettingsScreen onClose={() => setShowSettings(false)} />}
+      {showNotifications && (
+        <NotificationPanel
+          notifications={notifications}
+          onClose={() => setShowNotifications(false)}
+          onMarkAsRead={handleMarkAsRead}
+        />
+      )}
+    </div>
+  );
+}
 
 function getInitialAppScreen(): AppScreen {
   return getWalletSession()?.encryptedPk ? 'login' : 'launch';
@@ -28,21 +110,10 @@ function getInitialAppScreen(): AppScreen {
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [appScreen, setAppScreen] = useState<AppScreen>(getInitialAppScreen);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
 
-  const hasUnreadNotifications = notifications.some(n => !n.isRead);
-  
   /** Pending pk to encrypt on password confirm (from create or import). */
   const [pendingPrivateKey, setPendingPrivateKey] = useState<string | null>(null);
   const [pendingFromImport, setPendingFromImport] = useState(false);
-
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
-    ));
-  };
 
   // Entry flow screens
   if (appScreen === 'launch') {
@@ -111,38 +182,10 @@ export default function App() {
     return <LoginScreen onLogin={() => setAppScreen('main')} />;
   }
 
-  // Main app - Responsive layout (data shared via AppDataProvider, 1min refresh)
+  // Main app - layout and freeze notification live inside AppDataProvider
   return (
     <AppDataProvider>
-      <div className="flex flex-col h-screen max-w-6xl mx-auto bg-stone-50 shadow-xl relative">
-        <TopBarWithSettings 
-          onOpenSettings={() => setShowSettings(true)}
-          onOpenNotifications={() => setShowNotifications(true)}
-          hasUnreadNotifications={hasUnreadNotifications}
-        />
-        
-        {activeTab === 'home' && <HomeContent />}
-        {activeTab === 'aegis' && <AegisContent />}
-        {activeTab === 'activity' && <ActivityContent />}
-
-        <AgentChat />
-        <BottomNav 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-        />
-
-      {/* Settings Overlay */}
-      {showSettings && <SettingsScreen onClose={() => setShowSettings(false)} />}
-
-        {/* Notifications Overlay */}
-        {showNotifications && (
-          <NotificationPanel 
-            notifications={notifications}
-            onClose={() => setShowNotifications(false)}
-            onMarkAsRead={handleMarkAsRead}
-          />
-        )}
-      </div>
+      <MainAppLayout activeTab={activeTab} setActiveTab={setActiveTab} />
     </AppDataProvider>
   );
 }
