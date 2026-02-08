@@ -6,12 +6,12 @@ import { UnifiedModal } from './UnifiedModal';
 import { DiagnosisReportModal } from './DiagnosisReportModal';
 import { Implementation } from '../../../types';
 import { fetchAegisBatch, fetchGetRecordCurrent, setAegisImplementation, type GetRecordCurrentDecoded } from '../../../utils/aegisSession';
-import { implScan, type AuditLabel } from '../../../utils/auditApi';
+import { implScan, auditApply, type AuditLabel, type AuditApplyResponse } from '../../../utils/auditApi';
 import config from '../../../config/address.json';
 import { getSelectedNetwork } from '../../../utils/tokenSession';
 import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
 import { getLoginPasswordInMemory } from '../../../utils/authMemory';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -74,10 +74,11 @@ export function AegisContent() {
   const [registeredImpls, setRegisteredImpls] = useState<Implementation[]>([]);
   const [registeredLoading, setRegisteredLoading] = useState(true);
 
-  type ActivateStep = 'idle' | 'confirm' | 'executing' | 'success' | 'error';
+  type ActivateStep = 'idle' | 'confirm' | 'auditing' | 'audit-result' | 'executing' | 'success' | 'error';
   const [activateStep, setActivateStep] = useState<ActivateStep>('idle');
   const [activateTxHash, setActivateTxHash] = useState<string | null>(null);
   const [activateError, setActivateError] = useState<string | null>(null);
+  const [auditApplyResult, setAuditApplyResult] = useState<AuditApplyResponse | null>(null);
 
   const refetchAegisData = useCallback(() => {
     const rpcUrl = getSelectedNetwork()?.rpcUrl;
@@ -323,10 +324,38 @@ export function AegisContent() {
     setActivateStep('confirm');
     setActivateTxHash(null);
     setActivateError(null);
+    setAuditApplyResult(null);
     setShowActivateModal(true);
   };
 
+  /** Confirm → run auditApply only; result shown in audit-result step. */
   const confirmActivate = async () => {
+    if (!activatingImpl) return;
+    const network = getSelectedNetwork();
+    const walletAddress = getWalletSession()?.address;
+    if (!network?.rpcUrl || !walletAddress) {
+      setActivateError('Network or wallet missing. Please log in and select a network.');
+      setActivateStep('error');
+      return;
+    }
+    setActivateStep('auditing');
+    try {
+      const res = await auditApply({
+        chainId: Number(network.chainId),
+        wallet: walletAddress,
+        newImplAddress: activatingImpl.address,
+        mode: 'swap',
+      });
+      setAuditApplyResult(res);
+      setActivateStep('audit-result');
+    } catch (e) {
+      setActivateError(e instanceof Error ? e.message : String(e));
+      setActivateStep('error');
+    }
+  };
+
+  /** From audit-result (allow: true): run setAegisImplementation. */
+  const executeSetImplementation = async () => {
     if (!activatingImpl) return;
     const session = getWalletSession();
     const network = getSelectedNetwork();
@@ -367,6 +396,7 @@ export function AegisContent() {
     setActivateStep('idle');
     setActivateTxHash(null);
     setActivateError(null);
+    setAuditApplyResult(null);
     if (wasSuccess) refetchAegisData();
   };
 
@@ -482,8 +512,8 @@ export function AegisContent() {
             onClick={handleConfirmSelection}
             disabled={!selectedForReplacement}
             className={`flex-1 py-3 rounded-xl font-semibold transition-colors ${selectedForReplacement
-                ? 'bg-orange-500 text-white hover:bg-orange-600'
-                : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+              ? 'bg-orange-500 text-white hover:bg-orange-600'
+              : 'bg-stone-200 text-stone-400 cursor-not-allowed'
               }`}
           >
             Select
@@ -545,20 +575,24 @@ export function AegisContent() {
         </p>
       </UnifiedModal>
 
-      {/* Activate Implementation Modal (confirm → executing → success/error) */}
+      {/* Activate Implementation Modal (confirm → auditing → audit-result → [optional] executing → success/error) */}
       <UnifiedModal
         isOpen={showActivateModal}
-        onClose={activateStep === 'executing' ? undefined : closeActivateModal}
+        onClose={activateStep === 'executing' || activateStep === 'auditing' ? undefined : closeActivateModal}
         title={
           activateStep === 'confirm'
             ? 'Activate Implementation'
-            : activateStep === 'executing'
-              ? 'Activating…'
-              : activateStep === 'success'
-                ? 'Activation complete'
-                : 'Activation failed'
+            : activateStep === 'auditing'
+              ? 'Running audit…'
+              : activateStep === 'audit-result'
+                ? 'Audit result'
+                : activateStep === 'executing'
+                  ? 'Activating…'
+                  : activateStep === 'success'
+                    ? 'Activation complete'
+                    : 'Activation failed'
         }
-        showCloseButton={activateStep !== 'executing'}
+        showCloseButton={activateStep !== 'executing' && activateStep !== 'auditing'}
         fullScreen
         footer={
           activateStep === 'confirm' ? (
@@ -575,6 +609,23 @@ export function AegisContent() {
               >
                 Confirm
               </button>
+            </div>
+          ) : activateStep === 'audit-result' && auditApplyResult ? (
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
+              <button
+                onClick={closeActivateModal}
+                className="flex-1 bg-stone-100 text-stone-800 py-3 rounded-xl font-semibold hover:bg-stone-200 transition-colors"
+              >
+                {auditApplyResult.allow ? 'Cancel' : 'Close'}
+              </button>
+              {auditApplyResult.allow && (
+                <button
+                  onClick={executeSetImplementation}
+                  className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+                >
+                  Set implementation
+                </button>
+              )}
             </div>
           ) : activateStep === 'success' || activateStep === 'error' ? (
             <div className="flex justify-end">
@@ -601,15 +652,105 @@ export function AegisContent() {
               )}
             </div>
             <p className="text-sm text-stone-600">
-              This will send a transaction to the Aegis Guard Delegator contract. Gas fees apply.
+              An audit will run first. Then you can confirm to send the transaction. Gas fees apply.
             </p>
           </div>
         )}
+        {activateStep === 'auditing' && (
+          <div className="py-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-6">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
+                  <MessageCircle className="w-10 h-10 text-white animate-pulse" />
+                </div>
+                <div className="absolute inset-0 w-20 h-20 bg-orange-400 rounded-full animate-ping opacity-20"></div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-stone-900">
+                  Running apply audit…
+                </p>
+                <p className="text-xs text-stone-600">
+                  Please wait. Do not close this window.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        {activateStep === 'audit-result' && auditApplyResult && (
+          <div className="space-y-5">
+            {auditApplyResult.allow ? (
+              <div className="flex items-center gap-2 p-4 rounded-xl bg-green-50 border border-green-200">
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <p className="text-sm font-medium text-green-900">Audit passed. You can proceed to set the implementation.</p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 p-4 rounded-xl bg-red-50 border border-red-200">
+                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-900">Audit did not allow this change</p>
+                  <p className="text-xs text-red-800 mt-1">Review the results below and close to exit.</p>
+                </div>
+              </div>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-stone-200 p-4 bg-stone-50">
+                <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">New implementation audit</h4>
+                <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${auditApplyResult.newImplAudit.label === 'SAFE' ? 'bg-green-100 text-green-800' :
+                  auditApplyResult.newImplAudit.label === 'LOW_RISK' ? 'bg-amber-100 text-amber-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                  {auditApplyResult.newImplAudit.label}
+                </span>
+                <p className="text-xs text-stone-600 mt-2">Confidence: {(auditApplyResult.newImplAudit.confidence * 100).toFixed(0)}%</p>
+                {auditApplyResult.newImplAudit.summary && (
+                  <p className="text-sm text-stone-700 mt-2">{auditApplyResult.newImplAudit.summary}</p>
+                )}
+                {auditApplyResult.newImplReasonsText && (
+                  <p className="text-xs text-stone-600 mt-2 whitespace-pre-wrap">{auditApplyResult.newImplReasonsText}</p>
+                )}
+              </div>
+              <div className="rounded-xl border border-stone-200 p-4 bg-stone-50">
+                <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Swap audit</h4>
+                <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${auditApplyResult.swapAudit.label === 'SAFE' ? 'bg-green-100 text-green-800' :
+                  auditApplyResult.swapAudit.label === 'LOW_RISK' ? 'bg-amber-100 text-amber-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                  {auditApplyResult.swapAudit.label}
+                </span>
+                <p className="text-xs text-stone-600 mt-2">Confidence: {(auditApplyResult.swapAudit.confidence * 100).toFixed(0)}%</p>
+                {auditApplyResult.swapAudit.summary && (
+                  <p className="text-sm text-stone-700 mt-2">{auditApplyResult.swapAudit.summary}</p>
+                )}
+                {auditApplyResult.swapReasonsText && (
+                  <p className="text-xs text-stone-600 mt-2 whitespace-pre-wrap">{auditApplyResult.swapReasonsText}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {activateStep === 'executing' && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Loader2 className="w-14 h-14 text-orange-500 animate-spin mb-6" />
-            <p className="text-stone-800 font-medium">Setting active implementation…</p>
-            <p className="text-sm text-stone-600 mt-2">Please wait. Do not close this window.</p>
+          // <div className="flex flex-col items-center justify-center py-16 text-center">
+          //   <Loader2 className="w-14 h-14 text-orange-500 animate-spin mb-6" />
+          //   <p className="text-stone-800 font-medium">Setting active implementation…</p>
+          //   <p className="text-sm text-stone-600 mt-2">Please wait. Do not close this window.</p>
+          // </div>
+          <div className="py-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-6">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
+                  <MessageCircle className="w-10 h-10 text-white animate-pulse" />
+                </div>
+                <div className="absolute inset-0 w-20 h-20 bg-orange-400 rounded-full animate-ping opacity-20"></div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-stone-900">
+                  Setting active implementation…
+                </p>
+                <p className="text-xs text-stone-600">
+                  Please wait. Do not close this window.
+                </p>
+              </div>
+            </div>
           </div>
         )}
         {activateStep === 'success' && activateTxHash && (

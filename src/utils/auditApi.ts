@@ -50,3 +50,58 @@ export async function implScan(params: ImplScanRequest): Promise<ImplScanRespons
   }
   return await res.json();
 }
+
+// --- POST /v1/impl/audit-apply ---
+
+export type AuditApplyMode = 'swap' | string;
+
+export interface AuditApplyRequest {
+  chainId: number;
+  wallet: string;
+  newImplAddress: string;
+  mode: AuditApplyMode;
+}
+
+export interface AuditApplyTxTemplate {
+  to: string;
+  data: string;
+  value: string;
+}
+
+export interface AuditApplyResponse {
+  chainId: number;
+  wallet: string;
+  mode: string;
+  currentImpl: string;
+  newImpl: string;
+  newImplAudit: ImplScanAudit;
+  newImplReasonsText?: string;
+  newImplRegistryTxHash?: string;
+  swapAudit: ImplScanAudit;
+  swapReasonsText?: string;
+  swapRegistryTxHash?: string;
+  allow: boolean;
+  txTemplate: AuditApplyTxTemplate;
+}
+
+/**
+ * POST /v1/impl/audit-apply - get audit for applying (swap) a new implementation and optional tx template.
+ */
+export async function auditApply(params: AuditApplyRequest): Promise<AuditApplyResponse> {
+  const url = `${AUDIT_API_BASE.replace(/\/$/, '')}/v1/impl/audit-apply`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chainId: params.chainId,
+      wallet: params.wallet,
+      newImplAddress: params.newImplAddress,
+      mode: params.mode,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `audit-apply failed: ${res.status}`);
+  }
+  return await res.json();
+}
