@@ -4,6 +4,7 @@ import { UnifiedModal } from '../aegis/UnifiedModal';
 import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
 import { getLoginPasswordInMemory } from '../../../utils/authMemory';
 import { getSelectedNetwork } from '../../../utils/tokenSession';
+import { DEFAULT_NETWORKS } from '../../../config/netwotk';
 import { sendEIP7702ApplyTransaction, sendEIP7702ApplyTransactionAndSetSentinel } from '../../../utils/eip7702';
 import config from '../../../config/address.json';
 import { useAppData } from '../../contexts/AppDataContext';
@@ -36,12 +37,12 @@ export function AegisSetup() {
   const handleConfirmApply = async () => {
     setTxError(null);
     const session = getWalletSession();
-    const network = getSelectedNetwork();
+    const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
     if (!session?.encryptedPk) {
       setTxError('Wallet session not found. Please log in again.');
       return;
     }
-    if (!network?.rpcUrl) {
+    if (!network.rpcUrl) {
       setTxError('No network selected. Choose a network in Settings.');
       return;
     }
@@ -244,15 +245,6 @@ export function AegisSetup() {
           title="Applying Aegis Implementation"
           showCloseButton={false}
         >
-          {/* <div className="flex flex-col items-center justify-center py-8">
-            <Loader2 className="w-12 h-12 text-orange-500 animate-spin mb-4" />
-            <p className="text-sm text-stone-700 mb-2">
-              Executing delegated transaction…
-            </p>
-            <p className="text-xs text-stone-500">
-              Please wait while the transaction is processed
-            </p>
-          </div> */}
           <div className="py-12">
             <div className="flex flex-col items-center justify-center text-center space-y-6">
               <div className="relative">

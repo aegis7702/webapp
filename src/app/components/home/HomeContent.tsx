@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Send, Plus, X } from 'lucide-react';
 import { AegisSetup } from './AegisSetup';
+import { SignTransactionModal } from './SignTransactionModal';
 import { Token } from '../../../types';
 import { DEFAULT_NETWORKS, DEFAULT_TOKENS_BY_CHAIN } from '../../../config/netwotk';
 import { getWalletSession } from '../../../utils/walletSession';
@@ -32,6 +33,7 @@ export function HomeContent() {
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [showAddToken, setShowAddToken] = useState(false);
+  const [showSignTx, setShowSignTx] = useState(false);
   const [tokenAddress, setTokenAddress] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [symbolFetched, setSymbolFetched] = useState(false);
@@ -104,6 +106,13 @@ export function HomeContent() {
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold break-all min-w-0">
             {displayEthBalance} <span className="font-semibold opacity-95">ETH</span>
           </h2>
+          {/* <button
+            type="button"
+            onClick={() => setShowSignTx(true)}
+            className="mt-4 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-sm font-semibold"
+          >
+            Sign & send transaction
+          </button> */}
         </div>
 
         <AegisSetup />
@@ -142,6 +151,8 @@ export function HomeContent() {
           </button>
         </div>
       </div>
+
+      {showSignTx && <SignTransactionModal onClose={() => setShowSignTx(false)} />}
 
       {/* Add Token Modal - full screen */}
       {showAddToken && (

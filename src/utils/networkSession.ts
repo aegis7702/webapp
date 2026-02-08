@@ -1,9 +1,10 @@
 /**
- * Persist user-added networks in sessionStorage.
+ * Persist user-added networks (sessionStorage in web, chrome.storage.local in extension).
  * Fetch chainId from RPC (eth_chainId).
  */
 
 import type { Network } from '../config/netwotk';
+import { getItem, setItem, removeItem } from './storageBridge';
 
 const SESSION_KEY = 'aegis_networks';
 
@@ -35,7 +36,7 @@ export async function fetchChainIdFromRpc(rpcUrl: string): Promise<string | null
 }
 
 export function getSavedNetworks(): Network[] {
-  const raw = sessionStorage.getItem(SESSION_KEY);
+  const raw = getItem(SESSION_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as Network[];
@@ -52,15 +53,15 @@ export function addSavedNetwork(network: Network): void {
   );
   if (exists) return;
   list.push(network);
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(list));
+  setItem(SESSION_KEY, JSON.stringify(list));
 }
 
 export function removeSavedNetwork(chainId: string): void {
   const list = getSavedNetworks().filter((n) => n.chainId !== chainId);
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(list));
+  setItem(SESSION_KEY, JSON.stringify(list));
 }
 
 /** Clear all user-added networks from session (dev reset). */
 export function clearSavedNetworks(): void {
-  sessionStorage.removeItem(SESSION_KEY);
+  removeItem(SESSION_KEY);
 }

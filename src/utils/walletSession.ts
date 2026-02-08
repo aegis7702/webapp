@@ -1,9 +1,10 @@
 /**
  * Wallet session utilities: encrypt/decrypt private key with login password,
- * persist encrypted payload + password hash in sessionStorage.
+ * persist encrypted payload + password hash (sessionStorage or chrome.storage in extension).
  */
 
 import { getAddressFromPrivateKey } from './walletUtils';
+import { getItem, setItem, removeItem } from './storageBridge';
 
 const SESSION_KEY = 'aegis_wallet_session';
 const PBKDF2_ITERATIONS = 250_000;
@@ -119,17 +120,17 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 /**
- * Save combined wallet session (encrypted pk + password hash) to sessionStorage.
+ * Save combined wallet session (encrypted pk + password hash).
  */
 export function saveWalletSession(session: WalletSession): void {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  setItem(SESSION_KEY, JSON.stringify(session));
 }
 
 /**
- * Load combined wallet session from sessionStorage.
+ * Load combined wallet session from storage.
  */
 export function getWalletSession(): WalletSession | null {
-  const raw = sessionStorage.getItem(SESSION_KEY);
+  const raw = getItem(SESSION_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as WalletSession;
@@ -154,7 +155,7 @@ export function getEncryptedPrivateKey(): string | null {
  * Remove wallet session (e.g. on logout).
  */
 export function clearWalletSession(): void {
-  sessionStorage.removeItem(SESSION_KEY);
+  removeItem(SESSION_KEY);
 }
 
 /**

@@ -15,6 +15,8 @@ if (!existsSync(outDir)) {
 
 copyFileSync(join(ext, 'manifest.json'), join(outDir, 'manifest.json'));
 copyFileSync(join(ext, 'background.js'), join(outDir, 'background.js'));
+copyFileSync(join(ext, 'content.js'), join(outDir, 'content.js'));
+copyFileSync(join(ext, 'inpage.js'), join(outDir, 'inpage.js'));
 
 mkdirSync(iconsOut, { recursive: true });
 const logo = join(root, 'logo.png');

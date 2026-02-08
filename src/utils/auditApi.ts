@@ -105,3 +105,59 @@ export async function auditApply(params: AuditApplyRequest): Promise<AuditApplyR
   }
   return await res.json();
 }
+
+// --- POST /v1/tx/precheck ---
+
+export interface TxPrecheckRequest {
+  chainId: number;
+  from: string;
+  to: string;
+  value: string;
+  data: string;
+  txType?: number;
+  authorizationList?: unknown[];
+}
+
+export interface TxPrecheckAudit {
+  label: string;
+  confidence: number;
+  name?: string;
+  summary?: string;
+  description?: string;
+  reasons: string[];
+  matched_patterns: string[];
+}
+
+export interface TxPrecheckResponse {
+  chainId: number;
+  allow: boolean;
+  audit: TxPrecheckAudit;
+  reasonsText?: string;
+  walletCurrentImpl?: string;
+  walletCurrentImplRecord?: Record<string, unknown>;
+}
+
+/**
+ * POST /v1/tx/precheck - run precheck before sending a transaction.
+ */
+export async function txPrecheck(params: TxPrecheckRequest): Promise<TxPrecheckResponse> {
+  const url = `${AUDIT_API_BASE.replace(/\/$/, '')}/v1/tx/precheck`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chainId: params.chainId,
+      from: params.from,
+      to: params.to,
+      value: params.value ?? '0',
+      data: params.data ?? '0x',
+      txType: params.txType ?? 0,
+      authorizationList: params.authorizationList ?? [],
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `tx/precheck failed: ${res.status}`);
+  }
+  return await res.json();
+}

@@ -1,10 +1,12 @@
 /**
  * Selected network persistence + per-chain saved tokens.
  * Fetch ERC20 symbol/name via rpcBatchCall.
+ * Storage: sessionStorage (web) or chrome.storage.local (extension).
  */
 
 import type { Network } from '../config/netwotk';
 import { rpcBatchCall, decodeAbiString, decodeUint256 } from './rpcBatch';
+import { getItem, setItem } from './storageBridge';
 
 const SELECTED_NETWORK_KEY = 'aegis_selected_network';
 const SAVED_TOKENS_KEY = 'aegis_saved_tokens';
@@ -33,7 +35,7 @@ function formatBalance(raw: bigint, decimals: number): string {
 }
 
 export function getSelectedNetwork(): Network | null {
-  const raw = sessionStorage.getItem(SELECTED_NETWORK_KEY);
+  const raw = getItem(SELECTED_NETWORK_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Network;
@@ -45,7 +47,7 @@ export function getSelectedNetwork(): Network | null {
 }
 
 export function setSelectedNetwork(network: Network): void {
-  sessionStorage.setItem(SELECTED_NETWORK_KEY, JSON.stringify(network));
+  setItem(SELECTED_NETWORK_KEY, JSON.stringify(network));
 }
 
 export interface SavedToken {
@@ -55,7 +57,7 @@ export interface SavedToken {
 }
 
 export function getSavedTokens(chainId: string): SavedToken[] {
-  const raw = sessionStorage.getItem(SAVED_TOKENS_KEY);
+  const raw = getItem(SAVED_TOKENS_KEY);
   if (!raw) return [];
   try {
     const all = JSON.parse(raw) as Record<string, SavedToken[]>;
@@ -66,7 +68,7 @@ export function getSavedTokens(chainId: string): SavedToken[] {
 }
 
 export function addSavedToken(chainId: string, token: SavedToken): void {
-  const raw = sessionStorage.getItem(SAVED_TOKENS_KEY);
+  const raw = getItem(SAVED_TOKENS_KEY);
   const all: Record<string, SavedToken[]> = raw ? JSON.parse(raw) : {};
   if (!Array.isArray(all[chainId])) all[chainId] = [];
   const exists = all[chainId].some(
@@ -78,7 +80,7 @@ export function addSavedToken(chainId: string, token: SavedToken): void {
     symbol: token.symbol.trim(),
     address: token.address.trim(),
   });
-  sessionStorage.setItem(SAVED_TOKENS_KEY, JSON.stringify(all));
+  setItem(SAVED_TOKENS_KEY, JSON.stringify(all));
 }
 
 /**

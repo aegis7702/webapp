@@ -15,7 +15,7 @@ import {
   isDelegatedToImplementation,
 } from '../../utils/tokenSession';
 import { getWalletSession } from '../../utils/walletSession';
-import { DEFAULT_TOKENS_BY_CHAIN } from '../../config/netwotk';
+import { DEFAULT_NETWORKS, DEFAULT_TOKENS_BY_CHAIN } from '../../config/netwotk';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const REFRESH_INTERVAL_MS = 60 * 1000; // 1 minute
@@ -129,7 +129,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const refetchBalances = useCallback((): Promise<void> => {
-    const network = getSelectedNetwork();
+    const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
     const walletAddress = getWalletSession()?.address;
     if (!network?.rpcUrl || !walletAddress) {
       setEthBalance('0');
@@ -154,7 +154,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
   const refetchAegisSetupStatus = useCallback((): Promise<void> => {
     const session = getWalletSession();
-    const network = getSelectedNetwork();
+    const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
     if (!session?.address || !network?.rpcUrl) return Promise.resolve();
     const delegator = (config as Record<string, string>).AegisGuardDelegator;
     if (!delegator) return Promise.resolve();
@@ -164,7 +164,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refetchAegisData = useCallback((): Promise<void> => {
-    const rpcUrl = getSelectedNetwork()?.rpcUrl;
+    const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
+    const rpcUrl = network?.rpcUrl;
     const walletAddress = getWalletSession()?.address;
     if (!rpcUrl) {
       setRegisteredLoading(false);
@@ -206,7 +207,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refetchActivity = useCallback((): Promise<void> => {
-    const rpcUrl = getSelectedNetwork()?.rpcUrl;
+    const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
+    const rpcUrl = network?.rpcUrl;
     const walletAddress = getWalletSession()?.address;
     if (!rpcUrl) {
       setActivityLoading(false);

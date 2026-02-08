@@ -8,6 +8,7 @@ import { Implementation } from '../../../types';
 import { fetchGetRecordCurrent, setAegisImplementation, type GetRecordCurrentDecoded } from '../../../utils/aegisSession';
 import { implScan, auditApply, type AuditLabel, type AuditApplyResponse } from '../../../utils/auditApi';
 import config from '../../../config/address.json';
+import { DEFAULT_NETWORKS } from '../../../config/netwotk';
 import { getSelectedNetwork } from '../../../utils/tokenSession';
 import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
 import { getLoginPasswordInMemory } from '../../../utils/authMemory';
@@ -114,11 +115,8 @@ export function AegisContent() {
       setSearchResults([]);
       return;
     }
-    const rpcUrl = getSelectedNetwork()?.rpcUrl;
-    if (!rpcUrl) {
-      setSearchResults([]);
-      return;
-    }
+    const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
+    const rpcUrl = network.rpcUrl;
     const record = await fetchGetRecordCurrent(rpcUrl, trimmed, config.ImplSafetyRegistry);
     if (!record) {
       setSearchResults([]);
@@ -148,7 +146,8 @@ export function AegisContent() {
     setDiagnosingImpl(impl);
     setShowDiagnosisLoading(true);
     setDiagnosisData(null);
-    const chainId = getSelectedNetwork()?.chainId;
+    const net = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
+    const chainId = net.chainId;
     if (!chainId) {
       setShowDiagnosisLoading(false);
       setDiagnosisData({
@@ -276,9 +275,9 @@ export function AegisContent() {
   /** Confirm → run auditApply only; result shown in audit-result step. */
   const confirmActivate = async () => {
     if (!activatingImpl) return;
-    const network = getSelectedNetwork();
+    const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
     const walletAddress = getWalletSession()?.address;
-    if (!network?.rpcUrl || !walletAddress) {
+    if (!network.rpcUrl || !walletAddress) {
       setActivateError('Network or wallet missing. Please log in and select a network.');
       setActivateStep('error');
       return;
@@ -303,9 +302,9 @@ export function AegisContent() {
   const executeSetImplementation = async () => {
     if (!activatingImpl) return;
     const session = getWalletSession();
-    const network = getSelectedNetwork();
+    const network = getSelectedNetwork() ?? DEFAULT_NETWORKS[0];
     const password = getLoginPasswordInMemory();
-    if (!session?.encryptedPk || !network?.rpcUrl || !password) {
+    if (!session?.encryptedPk || !network.rpcUrl || !password) {
       setActivateError('Session or network missing. Please log in and select a network.');
       setActivateStep('error');
       return;
@@ -704,9 +703,9 @@ export function AegisContent() {
             <CheckCircle2 className="w-16 h-16 text-green-500 mb-6" />
             <p className="text-stone-800 font-medium">The implementation is now active.</p>
             <p className="text-sm text-stone-600 mt-2">Transaction hash:</p>
-            {getSelectedNetwork()?.blockExplorer ? (
+            {(getSelectedNetwork() ?? DEFAULT_NETWORKS[0])?.blockExplorer ? (
               <a
-                href={`${getSelectedNetwork()!.blockExplorer!.replace(/\/$/, '')}/tx/${activateTxHash}`}
+                href={`${(getSelectedNetwork() ?? DEFAULT_NETWORKS[0])!.blockExplorer!.replace(/\/$/, '')}/tx/${activateTxHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-orange-600 hover:underline font-mono text-sm break-all mt-1"

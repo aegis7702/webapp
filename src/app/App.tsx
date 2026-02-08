@@ -13,6 +13,7 @@ import { PasswordSetupScreen } from './components/onboarding/PasswordSetupScreen
 import { ProtectionConfirmationScreen } from './components/onboarding/ProtectionConfirmationScreen';
 import { LoginScreen } from './components/onboarding/LoginScreen';
 import { HomeContent } from './components/home/HomeContent';
+import { SignTransactionModal } from './components/home/SignTransactionModal';
 import { AegisContent } from './components/aegis/AegisContent';
 import { AgentChat } from './components/aegis/AgentChat';
 import { ActivityContent } from './components/activity/ActivityContent';
@@ -52,6 +53,17 @@ function buildFrozenNotification(
   };
 }
 
+function weiHexToEth(hex: string): string {
+  if (!hex || hex === '0x') return '0';
+  const wei = BigInt(hex);
+  if (wei === 0n) return '0';
+  const WEI_PER_ETH = BigInt(1e18);
+  const div = wei / WEI_PER_ETH;
+  const rem = wei % WEI_PER_ETH;
+  const remStr = rem.toString().padStart(18, '0').replace(/0+$/, '');
+  return remStr ? `${div}.${remStr}` : String(div);
+}
+
 function MainAppLayout({
   activeTab,
   setActiveTab,
@@ -64,6 +76,37 @@ function MainAppLayout({
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [freezeNotificationRead, setFreezeNotificationRead] = useState(false);
+  const [pendingExternalRequest, setPendingExternalRequest] = useState<{
+    id: string;
+    method: string;
+    params: unknown[];
+  } | null>(null);
+
+  React.useEffect(() => {
+    const w = typeof window !== 'undefined' ? window : null;
+    const crx = w && (w as Window & { chrome?: { runtime?: { id?: string; sendMessage: (msg: unknown, cb: (r: unknown) => void) => void } } }).chrome;
+    if (!crx?.runtime?.id) return;
+
+    function checkPending() {
+      crx!.runtime!.sendMessage({ type: 'getPendingRequest' }, (res: unknown) => {
+        const r = res as { request?: { id: string; method: string; params: unknown[] } | null };
+        const req = r?.request;
+        if (!req) return;
+        if (req.method === 'eth_requestAccounts') {
+          const addr = getWalletSession()?.address ?? '';
+          crx!.runtime!.sendMessage({ type: 'resolveRequest', id: req.id, result: addr ? [addr] : [], error: null }, () => {});
+          return;
+        }
+        if (req.method === 'eth_sendTransaction' && req.params?.[0]) {
+          setPendingExternalRequest({ id: req.id, method: req.method, params: req.params });
+        }
+      });
+    }
+
+    checkPending();
+    const interval = setInterval(checkPending, 1500);
+    return () => clearInterval(interval);
+  }, []);
 
   const notifications: Notification[] = isFrozen
     ? [
@@ -111,6 +154,28 @@ function MainAppLayout({
           onMarkAsRead={handleMarkAsRead}
         />
       )}
+      {pendingExternalRequest?.method === 'eth_sendTransaction' && pendingExternalRequest.params[0] ? (() => {
+        // EIP-1193: params = [tx] with tx = { to, value? (hex wei), data? (hex), gas?, gasPrice?, chainId?, ... }
+        const tx = pendingExternalRequest.params[0] as { to?: string; value?: string; data?: string };
+        const chrome = (window as Window & { chrome?: { runtime?: { sendMessage: (msg: unknown, cb?: (r: unknown) => void) => void } } }).chrome;
+        return (
+          <SignTransactionModal
+            requestId={pendingExternalRequest.id}
+            initialTo={tx.to ?? ''}
+            initialValueEth={weiHexToEth(tx.value ?? '0x0')}
+            initialData={tx.data ?? '0x'}
+            onResolve={(id, result) => {
+              chrome?.runtime?.sendMessage?.({ type: 'resolveRequest', id, result, error: null });
+              setPendingExternalRequest(null);
+            }}
+            onReject={(id, error) => {
+              chrome?.runtime?.sendMessage?.({ type: 'resolveRequest', id, result: null, error });
+              setPendingExternalRequest(null);
+            }}
+            onClose={() => setPendingExternalRequest(null)}
+          />
+        );
+      })() : null}
     </div>
   );
 }
