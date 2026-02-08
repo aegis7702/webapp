@@ -1,25 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { ImplementationCard } from './ImplementationCard';
 import { AegisSearchArea } from './SafeguardSearchBar';
 import { UnifiedModal } from './UnifiedModal';
 import { DiagnosisReportModal } from './DiagnosisReportModal';
 import { Implementation } from '../../../types';
-import { fetchAegisBatch, fetchGetRecordCurrent, setAegisImplementation, type GetRecordCurrentDecoded } from '../../../utils/aegisSession';
+import { fetchGetRecordCurrent, setAegisImplementation, type GetRecordCurrentDecoded } from '../../../utils/aegisSession';
 import { implScan, auditApply, type AuditLabel, type AuditApplyResponse } from '../../../utils/auditApi';
 import config from '../../../config/address.json';
 import { getSelectedNetwork } from '../../../utils/tokenSession';
 import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
 import { getLoginPasswordInMemory } from '../../../utils/authMemory';
 import { Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
-
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-function isZeroOrNullAddress(addr: string | null): boolean {
-  if (!addr) return true;
-  const a = addr.toLowerCase().replace(/^0x/, '').padStart(40, '0');
-  return a === '0'.repeat(40) || a === ZERO_ADDRESS.replace(/^0x/, '');
-}
+import { useAppData } from '../../contexts/AppDataContext';
 
 type ViewMode = 'normal' | 'selecting-replacement';
 
@@ -65,66 +58,18 @@ function mapGetRecordCurrentToImplementation(
 }
 
 export function AegisContent() {
+  const { aegis } = useAppData();
+  const { activeImpl, setActiveImpl, registeredImpls, setRegisteredImpls, registeredLoading, refetchAegisData } = aegis;
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<Implementation[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-
-  // State management
-  const [activeImpl, setActiveImpl] = useState<Implementation | null>(null);
-  const [registeredImpls, setRegisteredImpls] = useState<Implementation[]>([]);
-  const [registeredLoading, setRegisteredLoading] = useState(true);
 
   type ActivateStep = 'idle' | 'confirm' | 'auditing' | 'audit-result' | 'executing' | 'success' | 'error';
   const [activateStep, setActivateStep] = useState<ActivateStep>('idle');
   const [activateTxHash, setActivateTxHash] = useState<string | null>(null);
   const [activateError, setActivateError] = useState<string | null>(null);
   const [auditApplyResult, setAuditApplyResult] = useState<AuditApplyResponse | null>(null);
-
-  const refetchAegisData = useCallback(() => {
-    const rpcUrl = getSelectedNetwork()?.rpcUrl;
-    const walletAddress = getWalletSession()?.address;
-    if (!rpcUrl) {
-      setRegisteredLoading(false);
-      setActiveImpl(null);
-      return;
-    }
-    setRegisteredLoading(true);
-    fetchAegisBatch(rpcUrl, config.ImplSafetyRegistry, config.AegisGuardDelegator, walletAddress)
-      .then((result) => {
-        if (isZeroOrNullAddress(result.implementationAddress)) {
-          setActiveImpl(null);
-        } else if (result.implementationAddress && result.getRecordCurrent) {
-          setActiveImpl(
-            mapGetRecordCurrentToImplementation(result.implementationAddress, result.getRecordCurrent)
-          );
-        } else {
-          setActiveImpl(null);
-        }
-        if (result.getRecentRecords) {
-          const r = result.getRecentRecords;
-          const list: Implementation[] = r.impls.map((impl, i) =>
-            mapRecentRecordToImplementation(
-              impl,
-              r.names[i] ?? '',
-              r.summaries[i] ?? '',
-              r.descriptions[i] ?? '',
-              r.reasonsList[i] ?? '',
-              r.verdicts[i] ?? 'Unknown'
-            )
-          );
-          setRegisteredImpls(list);
-        }
-      })
-      .catch(() => {
-        setRegisteredImpls([]);
-        setActiveImpl(null);
-      })
-      .finally(() => setRegisteredLoading(false));
-  }, []);
-
-  useEffect(() => {
-    refetchAegisData();
-  }, [refetchAegisData]);
 
   // Modals and modes
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);

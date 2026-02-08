@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageCircle, Send, Plus, X } from 'lucide-react';
 import { AegisSetup } from './AegisSetup';
 import { Token } from '../../../types';
@@ -8,9 +8,8 @@ import {
   getSelectedNetwork,
   getSavedTokens,
   addSavedToken,
-  fetchTokenSymbol,
-  fetchBalances,
 } from '../../../utils/tokenSession';
+import { useAppData } from '../../contexts/AppDataContext';
 
 const MOBILE_BREAKPOINT = 640;
 
@@ -27,6 +26,9 @@ function formatBalanceForDisplay(raw: string, isMobile: boolean): string {
 }
 
 export function HomeContent() {
+  const { home } = useAppData();
+  const { ethBalance, tokenBalances, refetchBalances, fetchTokenSymbolNameAndAccountCode } = home;
+
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT);
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [showAddToken, setShowAddToken] = useState(false);
@@ -35,8 +37,6 @@ export function HomeContent() {
   const [symbolFetched, setSymbolFetched] = useState(false);
   const [symbolLoading, setSymbolLoading] = useState(false);
   const [addError, setAddError] = useState('');
-  const [ethBalance, setEthBalance] = useState('0');
-  const [tokenBalances, setTokenBalances] = useState<{ address: string; symbol: string; balance: string }[]>([]);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
@@ -53,39 +53,15 @@ export function HomeContent() {
     ...savedTokens.map((t) => ({ symbol: t.symbol, name: t.name, address: t.address })),
   ];
 
-  const walletAddress = getWalletSession()?.address ?? '';
-
-  useEffect(() => {
-    if (!network?.rpcUrl || !walletAddress) {
-      setEthBalance('0');
-      setTokenBalances([]);
-      return;
-    }
-    let cancelled = false;
-    fetchBalances(
-      network.rpcUrl,
-      walletAddress,
-      allTokens.map((t) => ({ address: t.address, symbol: t.symbol }))
-    ).then(({ ethBalance: eth, tokenBalances: tb }) => {
-      if (!cancelled) {
-        setEthBalance(eth);
-        setTokenBalances(tb.map((b) => ({ address: b.address, symbol: b.symbol, balance: b.balance })));
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [network?.rpcUrl, walletAddress, allTokens.length, allTokens.map((t) => t.address).join(',')]);
-
   const handleFetchSymbol = async () => {
     if (!tokenAddress.trim() || !network?.rpcUrl) return;
     setSymbolLoading(true);
     setAddError('');
     setSymbolFetched(false);
     try {
-      const sym = await fetchTokenSymbol(tokenAddress.trim(), network.rpcUrl);
-      if (sym) {
-        setTokenSymbol(sym);
+      const { symbol } = await fetchTokenSymbolNameAndAccountCode(tokenAddress.trim(), '', network.rpcUrl);
+      if (symbol) {
+        setTokenSymbol(symbol);
         setSymbolFetched(true);
       } else {
         setAddError('Could not fetch symbol');
@@ -111,6 +87,7 @@ export function HomeContent() {
     setTokenSymbol('');
     setSymbolFetched(false);
     setShowAddToken(false);
+    refetchBalances();
   };
 
   const getBalance = (address: string) =>

@@ -1,47 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Shield, Loader2, CheckCircle2, Copy, Check, XCircle, MessageCircle } from 'lucide-react';
 import { UnifiedModal } from '../aegis/UnifiedModal';
 import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
 import { getLoginPasswordInMemory } from '../../../utils/authMemory';
-import { getSelectedNetwork, isDelegatedToImplementation } from '../../../utils/tokenSession';
+import { getSelectedNetwork } from '../../../utils/tokenSession';
 import { sendEIP7702ApplyTransaction, sendEIP7702ApplyTransactionAndSetSentinel } from '../../../utils/eip7702';
 import config from '../../../config/address.json';
+import { useAppData } from '../../contexts/AppDataContext';
 
-type AegisStatus = 'not-applied' | 'applied';
 type ModalStep = 'confirmation' | 'executing' | 'success' | 'failure' | null;
 
 // Official Aegis Implementation Contract
 const AEGIS_CONTRACT_ADDRESS = config.AegisGuardDelegator;
 
 export function AegisSetup() {
-  const [status, setStatus] = useState<AegisStatus>('not-applied');
-  const [statusCheckLoading, setStatusCheckLoading] = useState(true);
+  const { home } = useAppData();
+  const { aegisSetupStatus: status, refetchAegisSetupStatus } = home;
+
   const [modalStep, setModalStep] = useState<ModalStep>(null);
   const [copied, setCopied] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-
-  useEffect(() => {
-    const session = getWalletSession();
-    const network = getSelectedNetwork();
-    if (!session?.address || !network?.rpcUrl) {
-      setStatusCheckLoading(false);
-      return;
-    }
-    let cancelled = false;
-    isDelegatedToImplementation(session.address, network.rpcUrl, AEGIS_CONTRACT_ADDRESS)
-      .then((delegated) => {
-        if (!cancelled) {
-          setStatus(delegated ? 'applied' : 'not-applied');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setStatusCheckLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleCopyAddress = () => {
     navigator.clipboard.writeText(AEGIS_CONTRACT_ADDRESS);
@@ -112,7 +91,7 @@ export function AegisSetup() {
   };
 
   const handleSuccess = () => {
-    setStatus('applied');
+    refetchAegisSetupStatus();
     setModalStep(null);
     setTxHash(null);
   };
@@ -149,17 +128,7 @@ export function AegisSetup() {
     </div>
   );
 
-  if (statusCheckLoading) {
-    return (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 mb-6">
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-8 h-8 text-stone-400 animate-spin" />
-          <span className="ml-2 text-sm text-stone-500">Checking delegation status…</span>
-        </div>
-      </div>
-    );
-  }
-
+  // Show content immediately (no loading block). Status updates when check completes.
   // State 1: Not Applied — show Aegis Security Implementation (Apply) screen
   if (status === 'not-applied') {
     return (

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { TransactionDetailPage } from './TransactionDetailPage';
 import { Transaction } from '../../../types';
-import { fetchRecentTxsWithNotes, type RecentTxWithNote } from '../../../utils/activitySession';
-import { getSelectedNetwork } from '../../../utils/tokenSession';
-import { getWalletSession } from '../../../utils/walletSession';
+import { type RecentTxWithNote } from '../../../utils/activitySession';
+import { useAppData } from '../../contexts/AppDataContext';
 
 /** Format time from Unix seconds (bigint or number). */
 function formatTimeFromUnix(unixSeconds: bigint | number): string {
@@ -106,30 +105,16 @@ function mapToTransaction(
 }
 
 export function ActivityContent() {
+  const { activity } = useAppData();
+  const { txs, isFrozen, freezeReason, loading } = activity;
+
+  const transactions = useMemo(
+    () => txs.map((item, index) => mapToTransaction(item, index, isFrozen, freezeReason)),
+    [txs, isFrozen, freezeReason]
+  );
+
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showMonitoringBanner, setShowMonitoringBanner] = useState(true);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const rpcUrl = getSelectedNetwork()?.rpcUrl;
-    const walletAddress = getWalletSession()?.address;
-    if (!rpcUrl) {
-      setTransactions([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    fetchRecentTxsWithNotes(rpcUrl, walletAddress)
-      .then(({ txs, isFrozen, freezeReason }) => {
-        const list = txs.map((item, index) =>
-          mapToTransaction(item, index, isFrozen, freezeReason)
-        );
-        setTransactions(list);
-      })
-      .catch(() => setTransactions([]))
-      .finally(() => setLoading(false));
-  }, []);
 
   const handleTransactionClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);

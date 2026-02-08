@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { TabType, AppScreen } from '../types';
 import { TopBarWithSettings } from './components/navigation/TopBar';
 import { BottomNav } from './components/navigation/BottomNav';
@@ -16,6 +16,7 @@ import { HomeContent } from './components/home/HomeContent';
 import { AegisContent } from './components/aegis/AegisContent';
 import { AgentChat } from './components/aegis/AgentChat';
 import { ActivityContent } from './components/activity/ActivityContent';
+import { AppDataProvider } from './contexts/AppDataContext';
 import { mockNotifications } from '../data/mockNotifications';
 
 import { encryptAndSaveWalletSession, getWalletSession } from '../utils/walletSession';
@@ -110,36 +111,38 @@ export default function App() {
     return <LoginScreen onLogin={() => setAppScreen('main')} />;
   }
 
-  // Main app - Responsive layout
+  // Main app - Responsive layout (data shared via AppDataProvider, 1min refresh)
   return (
-    <div className="flex flex-col h-screen max-w-6xl mx-auto bg-stone-50 shadow-xl relative">
-      <TopBarWithSettings 
-        onOpenSettings={() => setShowSettings(true)}
-        onOpenNotifications={() => setShowNotifications(true)}
-        hasUnreadNotifications={hasUnreadNotifications}
-      />
-      
-      {activeTab === 'home' && <HomeContent />}
-      {activeTab === 'aegis' && <AegisContent />}
-      {activeTab === 'activity' && <ActivityContent />}
+    <AppDataProvider>
+      <div className="flex flex-col h-screen max-w-6xl mx-auto bg-stone-50 shadow-xl relative">
+        <TopBarWithSettings 
+          onOpenSettings={() => setShowSettings(true)}
+          onOpenNotifications={() => setShowNotifications(true)}
+          hasUnreadNotifications={hasUnreadNotifications}
+        />
+        
+        {activeTab === 'home' && <HomeContent />}
+        {activeTab === 'aegis' && <AegisContent />}
+        {activeTab === 'activity' && <ActivityContent />}
 
-      <AgentChat />
-      <BottomNav 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-      />
+        <AgentChat />
+        <BottomNav 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+        />
 
       {/* Settings Overlay */}
       {showSettings && <SettingsScreen onClose={() => setShowSettings(false)} />}
 
         {/* Notifications Overlay */}
-      {showNotifications && (
-        <NotificationPanel 
-          notifications={notifications}
-          onClose={() => setShowNotifications(false)}
-          onMarkAsRead={handleMarkAsRead}
-        />
-      )}
-    </div>
+        {showNotifications && (
+          <NotificationPanel 
+            notifications={notifications}
+            onClose={() => setShowNotifications(false)}
+            onMarkAsRead={handleMarkAsRead}
+          />
+        )}
+      </div>
+    </AppDataProvider>
   );
 }
