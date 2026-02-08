@@ -59,7 +59,7 @@ function MainAppLayout({
   activeTab: TabType;
   setActiveTab: (t: TabType) => void;
 }) {
-  const { activity } = useAppData();
+  const { activity, initialLoadDone } = useAppData();
   const { isFrozen, freezeReason, txs } = activity;
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -78,6 +78,18 @@ function MainAppLayout({
   const handleMarkAsRead = (id: string) => {
     if (id === FROZEN_NOTIFICATION_ID) setFreezeNotificationRead(true);
   };
+
+  if (!initialLoadDone) {
+    return (
+      <div className="flex flex-col h-screen max-w-6xl mx-auto bg-stone-50 shadow-xl items-center justify-center">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-sm animate-logo-float">
+          <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen max-w-6xl mx-auto bg-stone-50 shadow-xl relative">

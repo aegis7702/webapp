@@ -71,7 +71,7 @@ export interface AppDataAegis {
   registeredImpls: Implementation[];
   setRegisteredImpls: React.Dispatch<React.SetStateAction<Implementation[]>>;
   registeredLoading: boolean;
-  refetchAegisData: () => void;
+  refetchAegisData: () => void | Promise<void>;
 }
 
 export interface AppDataActivity {
@@ -79,7 +79,7 @@ export interface AppDataActivity {
   isFrozen: boolean;
   freezeReason: string | null;
   loading: boolean;
-  refetchActivity: () => void;
+  refetchActivity: () => void | Promise<void>;
 }
 
 export type AegisSetupStatus = 'not-applied' | 'applied';
@@ -87,20 +87,22 @@ export type AegisSetupStatus = 'not-applied' | 'applied';
 export interface AppDataHome {
   ethBalance: string;
   tokenBalances: { address: string; symbol: string; balance: string }[];
-  refetchBalances: () => void;
+  refetchBalances: () => void | Promise<void>;
   fetchTokenSymbolNameAndAccountCode: (
     tokenAddress: string,
     accountAddress: string,
     rpcUrl: string
   ) => Promise<{ symbol: string | null; name: string | null; accountCode: string | null }>;
   aegisSetupStatus: AegisSetupStatus;
-  refetchAegisSetupStatus: () => void;
+  refetchAegisSetupStatus: () => void | Promise<void>;
 }
 
 export interface AppDataContextValue {
   aegis: AppDataAegis;
   activity: AppDataActivity;
   home: AppDataHome;
+  /** True after the first data load (login → main) has finished. Used for initial loading screen. */
+  initialLoadDone: boolean;
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
@@ -124,14 +126,15 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [ethBalance, setEthBalance] = useState('0');
   const [tokenBalances, setTokenBalances] = useState<{ address: string; symbol: string; balance: string }[]>([]);
   const [aegisSetupStatus, setAegisSetupStatus] = useState<AegisSetupStatus>('not-applied');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  const refetchBalances = useCallback(() => {
+  const refetchBalances = useCallback((): Promise<void> => {
     const network = getSelectedNetwork();
     const walletAddress = getWalletSession()?.address;
     if (!network?.rpcUrl || !walletAddress) {
       setEthBalance('0');
       setTokenBalances([]);
-      return;
+      return Promise.resolve();
     }
     const chainId = network.chainId ?? '';
     const defaultTokens = DEFAULT_TOKENS_BY_CHAIN[chainId] ?? [];
@@ -141,7 +144,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       ...savedTokens.map((t) => ({ symbol: t.symbol, name: t.name, address: t.address })),
     ];
     const tokensForFetch = allTokens.map((t) => ({ address: t.address, symbol: t.symbol }));
-    fetchBalances(network.rpcUrl, walletAddress, tokensForFetch).then(
+    return fetchBalances(network.rpcUrl, walletAddress, tokensForFetch).then(
       ({ ethBalance: eth, tokenBalances: tb }) => {
         setEthBalance(eth);
         setTokenBalances(tb.map((b) => ({ address: b.address, symbol: b.symbol, balance: b.balance })));
@@ -149,27 +152,27 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const refetchAegisSetupStatus = useCallback(() => {
+  const refetchAegisSetupStatus = useCallback((): Promise<void> => {
     const session = getWalletSession();
     const network = getSelectedNetwork();
-    if (!session?.address || !network?.rpcUrl) return;
+    if (!session?.address || !network?.rpcUrl) return Promise.resolve();
     const delegator = (config as Record<string, string>).AegisGuardDelegator;
-    if (!delegator) return;
-    isDelegatedToImplementation(session.address, network.rpcUrl, delegator).then((delegated) => {
+    if (!delegator) return Promise.resolve();
+    return isDelegatedToImplementation(session.address, network.rpcUrl, delegator).then((delegated) => {
       setAegisSetupStatus(delegated ? 'applied' : 'not-applied');
     });
   }, []);
 
-  const refetchAegisData = useCallback(() => {
+  const refetchAegisData = useCallback((): Promise<void> => {
     const rpcUrl = getSelectedNetwork()?.rpcUrl;
     const walletAddress = getWalletSession()?.address;
     if (!rpcUrl) {
       setRegisteredLoading(false);
       setActiveImpl(null);
-      return;
+      return Promise.resolve();
     }
     setRegisteredLoading(true);
-    fetchAegisBatch(rpcUrl, config.ImplSafetyRegistry, config.AegisGuardDelegator, walletAddress)
+    return fetchAegisBatch(rpcUrl, config.ImplSafetyRegistry, config.AegisGuardDelegator, walletAddress)
       .then((result) => {
         if (isZeroOrNullAddress(result.implementationAddress)) {
           setActiveImpl(null);
@@ -202,16 +205,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setRegisteredLoading(false));
   }, []);
 
-  const refetchActivity = useCallback(() => {
+  const refetchActivity = useCallback((): Promise<void> => {
     const rpcUrl = getSelectedNetwork()?.rpcUrl;
     const walletAddress = getWalletSession()?.address;
     if (!rpcUrl) {
       setActivityLoading(false);
       setActivityTxs([]);
-      return;
+      return Promise.resolve();
     }
     setActivityLoading(true);
-    fetchRecentTxsWithNotes(rpcUrl, walletAddress)
+    return fetchRecentTxsWithNotes(rpcUrl, walletAddress)
       .then(({ txs, isFrozen, freezeReason }) => {
         setActivityTxs(txs);
         setActivityIsFrozen(isFrozen);
@@ -226,17 +229,25 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refetchAegisData();
-    refetchActivity();
-    refetchBalances();
-    refetchAegisSetupStatus();
+    let cancelled = false;
+    Promise.all([
+      refetchAegisData(),
+      refetchActivity(),
+      refetchBalances(),
+      refetchAegisSetupStatus(),
+    ]).finally(() => {
+      if (!cancelled) setInitialLoadDone(true);
+    });
     const id = setInterval(() => {
       refetchAegisData();
       refetchActivity();
       refetchBalances();
       refetchAegisSetupStatus();
     }, REFRESH_INTERVAL_MS);
-    return () => clearInterval(id);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [refetchAegisData, refetchActivity, refetchBalances, refetchAegisSetupStatus]);
 
   const value: AppDataContextValue = {
@@ -263,6 +274,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       aegisSetupStatus,
       refetchAegisSetupStatus,
     },
+    initialLoadDone,
   };
 
   return (
