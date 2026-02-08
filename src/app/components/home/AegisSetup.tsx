@@ -136,9 +136,6 @@ export function AegisSetup() {
       <>
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 mb-6">
           <div className="flex items-start gap-4">
-            {/* <div className="flex-shrink-0 w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center">
-              <Shield className="w-6 h-6 text-orange-500" />
-            </div> */}
 
             <div className="flex-1">
               <h3 className="font-semibold text-base text-stone-900 mb-3">
@@ -172,7 +169,6 @@ export function AegisSetup() {
                 onClick={handleApplyClick}
                 className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
               >
-                <Shield className="w-4 h-4" />
                 Apply Implementation
               </button>
             </div>
@@ -343,10 +339,6 @@ export function AegisSetup() {
   return (
     <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-6 shadow-sm border border-orange-200 mb-6">
       <div className="flex items-start gap-4">
-        {/* <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-          <Shield className="w-6 h-6 text-orange-600" />
-        </div> */}
-
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3">
             <h3 className="font-semibold text-base text-stone-900">

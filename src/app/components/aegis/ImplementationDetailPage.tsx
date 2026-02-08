@@ -2,6 +2,7 @@ import { ChevronLeft, Copy, Check, Shield, AlertTriangle } from 'lucide-react';
 import { Implementation } from '../../../types';
 import { AgentChat } from './AgentChat';
 import { useState } from 'react';
+import logoWhite from '../../../../public/aegis_logo_white.png';
 
 interface ImplementationDetailPageProps {
   implementation: Implementation;
@@ -153,7 +154,7 @@ export function ImplementationDetailPage({ implementation, onBack }: Implementat
           <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border-2 border-orange-200">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                <Shield className="w-4 h-4 text-white" />
+                <img src={logoWhite} alt="logo" className="h-4" />
               </div>
               <h2 className="font-semibold text-base text-stone-900">Security & AI Audit</h2>
             </div>

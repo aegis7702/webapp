@@ -1,6 +1,7 @@
 import { ChevronLeft, AlertTriangle, Shield, Lock } from 'lucide-react';
 import { Transaction } from '../../../types';
 import { AgentChat } from '../aegis/AgentChat';
+import logoWhite from '../../../../public/aegis_logo_white.png';
 
 interface TransactionDetailPageProps {
   transaction: Transaction;
@@ -28,7 +29,7 @@ export function TransactionDetailPage({ transaction, onBack }: TransactionDetail
         {/* Transaction Summary */}
         <div className="bg-white rounded-2xl p-6 border border-stone-200">
           <h2 className="font-semibold text-base text-stone-900 mb-4">Transaction Summary</h2>
-          
+
           <div className="space-y-3">
             <div className="flex justify-between items-start">
               <span className="text-sm text-stone-600">Action</span>
@@ -45,8 +46,8 @@ export function TransactionDetailPage({ transaction, onBack }: TransactionDetail
             <div className="flex justify-between items-start">
               <span className="text-sm text-stone-600">Amount</span>
               <span className="text-sm font-medium text-stone-900">
-                {transaction.type === 'swap' 
-                  ? transaction.amount 
+                {transaction.type === 'swap'
+                  ? transaction.amount
                   : `${transaction.amount} ${transaction.tokenSymbol}`}
               </span>
             </div>
@@ -58,11 +59,10 @@ export function TransactionDetailPage({ transaction, onBack }: TransactionDetail
 
             <div className="flex justify-between items-start">
               <span className="text-sm text-stone-600">Status</span>
-              <span className={`text-sm font-semibold ${
-                transaction.status === 'success' ? 'text-green-600' :
-                transaction.status === 'failed' ? 'text-red-600' :
-                'text-amber-600'
-              }`}>
+              <span className={`text-sm font-semibold ${transaction.status === 'success' ? 'text-green-600' :
+                  transaction.status === 'failed' ? 'text-red-600' :
+                    'text-amber-600'
+                }`}>
                 {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
               </span>
             </div>
@@ -83,7 +83,7 @@ export function TransactionDetailPage({ transaction, onBack }: TransactionDetail
           <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border-2 border-orange-200">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                <Shield className="w-4 h-4 text-white" />
+                <img src={logoWhite} alt="logo" className="h-4" />
               </div>
               <h2 className="font-semibold text-base text-stone-900">EIP-7702 Execution Summary</h2>
             </div>
@@ -179,28 +179,25 @@ export function TransactionDetailPage({ transaction, onBack }: TransactionDetail
             {/* Risk Detection Outcome */}
             <div>
               <h3 className="text-sm font-semibold text-stone-700 mb-2">Risk Detection Outcome</h3>
-              
+
               {postExecutionData.anomalyDetected ? (
-                <div className={`rounded-lg p-4 border-2 ${
-                  postExecutionData.riskLevel === 'critical' ? 'bg-red-50 border-red-300' :
-                  postExecutionData.riskLevel === 'high' ? 'bg-orange-50 border-orange-300' :
-                  postExecutionData.riskLevel === 'low' ? 'bg-amber-50 border-amber-300' :
-                  'bg-stone-50 border-stone-300'
-                }`}>
+                <div className={`rounded-lg p-4 border-2 ${postExecutionData.riskLevel === 'critical' ? 'bg-red-50 border-red-300' :
+                    postExecutionData.riskLevel === 'high' ? 'bg-orange-50 border-orange-300' :
+                      postExecutionData.riskLevel === 'low' ? 'bg-amber-50 border-amber-300' :
+                        'bg-stone-50 border-stone-300'
+                  }`}>
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className={`w-5 h-5 flex-shrink-0 ${
-                      postExecutionData.riskLevel === 'critical' ? 'text-red-600' :
-                      postExecutionData.riskLevel === 'high' ? 'text-orange-600' :
-                      postExecutionData.riskLevel === 'low' ? 'text-amber-600' :
-                      'text-stone-600'
-                    }`} />
+                    <AlertTriangle className={`w-5 h-5 flex-shrink-0 ${postExecutionData.riskLevel === 'critical' ? 'text-red-600' :
+                        postExecutionData.riskLevel === 'high' ? 'text-orange-600' :
+                          postExecutionData.riskLevel === 'low' ? 'text-amber-600' :
+                            'text-stone-600'
+                      }`} />
                     <div className="flex-1">
-                      <p className={`font-semibold text-sm mb-1 ${
-                        postExecutionData.riskLevel === 'critical' ? 'text-red-900' :
-                        postExecutionData.riskLevel === 'high' ? 'text-orange-900' :
-                        postExecutionData.riskLevel === 'low' ? 'text-amber-900' :
-                        'text-stone-900'
-                      }`}>
+                      <p className={`font-semibold text-sm mb-1 ${postExecutionData.riskLevel === 'critical' ? 'text-red-900' :
+                          postExecutionData.riskLevel === 'high' ? 'text-orange-900' :
+                            postExecutionData.riskLevel === 'low' ? 'text-amber-900' :
+                              'text-stone-900'
+                        }`}>
                         {postExecutionData.riskDescription || 'Suspicious execution path detected'}
                       </p>
                       <p className="text-xs text-stone-700">
@@ -265,7 +262,7 @@ export function TransactionDetailPage({ transaction, onBack }: TransactionDetail
 
               <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
                 <p className="text-xs text-amber-900">
-                  <span className="font-semibold">Note:</span> This freeze was executed by a registered sentinel address 
+                  <span className="font-semibold">Note:</span> This freeze was executed by a registered sentinel address
                   as a protective measure. This is informational only and does not require user action at this time.
                 </p>
               </div>
@@ -279,15 +276,15 @@ export function TransactionDetailPage({ transaction, onBack }: TransactionDetail
             <h3 className="font-semibold text-sm text-blue-900 mb-3">Understanding EIP-7702 Monitoring</h3>
             <div className="space-y-2 text-xs text-blue-800">
               <p>
-                <span className="font-semibold">• Post-Execution Analysis:</span> Some risks can only be detected 
+                <span className="font-semibold">• Post-Execution Analysis:</span> Some risks can only be detected
                 after transaction execution through event and state monitoring.
               </p>
               <p>
-                <span className="font-semibold">• Continuous Monitoring:</span> Aegis continues to monitor 
+                <span className="font-semibold">• Continuous Monitoring:</span> Aegis continues to monitor
                 delegated implementations even after successful execution.
               </p>
               <p>
-                <span className="font-semibold">• Automated Protection:</span> Sentinel addresses can freeze 
+                <span className="font-semibold">• Automated Protection:</span> Sentinel addresses can freeze
                 wallets automatically when critical anomalies are detected.
               </p>
             </div>

@@ -1,11 +1,17 @@
-import { Home, Shield, Bot, Clock } from 'lucide-react';
-import { TabType } from '../../../types';
+import { Home, Clock } from 'lucide-react';
+import logoGray from '../../../../public/aegis_logo_gray.png';
+import logoOrange from '../../../../public/aegis_logo_orange.png';
 
-export function BottomNav({ activeTab, setActiveTab }: { activeTab: TabType; setActiveTab: (tab: TabType) => void }) {
-  const tabs: { id: TabType; label: string; icon: typeof Home }[] = [
+export function BottomNav({
+  activeTab,
+  setActiveTab,
+}: {
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
+}) {
+  const tabs: { id: TabType; label: string; icon?: any }[] = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'aegis', label: 'Aegis', icon: Shield },
-    // { id: 'agent', label: 'Agent', icon: Bot },
+    { id: 'aegis', label: 'Aegis' },
     { id: 'activity', label: 'Activity', icon: Clock },
   ];
 
@@ -13,8 +19,8 @@ export function BottomNav({ activeTab, setActiveTab }: { activeTab: TabType; set
     <div className="border-t border-stone-200 bg-white">
       <div className="grid grid-cols-3">
         {tabs.map((tab) => {
-          const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+
           return (
             <button
               key={tab.id}
@@ -23,8 +29,30 @@ export function BottomNav({ activeTab, setActiveTab }: { activeTab: TabType; set
                 isActive ? 'bg-orange-50' : 'hover:bg-stone-50'
               }`}
             >
-              <Icon className={`w-5 h-5 mb-1 ${isActive ? 'text-orange-500' : 'text-stone-500'}`} />
-              <span className={`text-xs font-semibold ${isActive ? 'text-orange-500' : 'text-stone-600'}`}>
+              {tab.id === 'aegis' ? (
+                <img
+                  src={isActive ? logoOrange : logoGray}
+                  alt="Aegis"
+                  className="h-5 mb-1"
+                />
+              ) : (
+                (() => {
+                  const Icon = tab.icon;
+                  return (
+                    <Icon
+                      className={`w-5 h-5 mb-1 ${
+                        isActive ? 'text-orange-500' : 'text-stone-500'
+                      }`}
+                    />
+                  );
+                })()
+              )}
+
+              <span
+                className={`text-xs font-semibold ${
+                  isActive ? 'text-orange-500' : 'text-stone-600'
+                }`}
+              >
                 {tab.label}
               </span>
             </button>

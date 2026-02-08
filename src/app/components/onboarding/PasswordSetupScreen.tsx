@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Shield, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import logoWhite from '../../../../public/aegis_logo_white.png';
 
 export function PasswordSetupScreen({
   onComplete,
@@ -39,7 +40,7 @@ export function PasswordSetupScreen({
       </button>
       <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
         <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mb-6 mx-auto shadow-md">
-          <Shield className="w-8 h-8 text-white" />
+          <img src={logoWhite} alt="logo" className="h-8" />
         </div>
         <h2 className="text-2xl font-bold text-stone-900 mb-2 text-center">Set Your Password</h2>
         

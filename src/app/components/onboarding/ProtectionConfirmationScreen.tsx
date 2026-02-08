@@ -1,10 +1,10 @@
-import { Shield } from 'lucide-react';
+import logoOrange from '../../../../public/aegis_logo_orange.png';
 
 export function ProtectionConfirmationScreen({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="flex flex-col h-screen items-center justify-center bg-gradient-to-br from-orange-500 to-orange-600 px-8">
       <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg">
-        <Shield className="w-12 h-12 text-orange-500" />
+        <img src={logoOrange} alt="logo" className="h-12" />
       </div>
       <h1 className="text-3xl font-bold text-white mb-4 text-center">Your wallet is now protected</h1>
       <p className="text-white/90 mb-12 text-center max-w-md">
