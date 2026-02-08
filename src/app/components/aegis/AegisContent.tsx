@@ -6,6 +6,7 @@ import { UnifiedModal } from './UnifiedModal';
 import { DiagnosisReportModal } from './DiagnosisReportModal';
 import { Implementation } from '../../../types';
 import { fetchAegisBatch, fetchGetRecordCurrent, setAegisImplementation, type GetRecordCurrentDecoded } from '../../../utils/aegisSession';
+import { implScan, type AuditLabel } from '../../../utils/auditApi';
 import config from '../../../config/address.json';
 import { getSelectedNetwork } from '../../../utils/tokenSession';
 import { getWalletSession, decryptPrivateKey } from '../../../utils/walletSession';
@@ -135,24 +136,26 @@ export function AegisContent() {
   const [diagnosingImpl, setDiagnosingImpl] = useState<Implementation | null>(null);
   const [activatingImpl, setActivatingImpl] = useState<Implementation | null>(null);
 
-  // Mock diagnosis data
-  const [mockDiagnosisData] = useState({
-    label: 'SAFE' as const,
-    confidence: 0.87,
-    reasons: [
-      'Implementation follows standard EIP-7702 delegation patterns',
-      'No suspicious external calls detected in contract code',
-      'Storage layout is compatible with standard EOA implementations',
-      'Gas optimization patterns are safe and efficient'
-    ],
-    matched_patterns: [
-      'StandardDelegationProxy pattern',
-      'SafeStorageAccess pattern',
-      'EIP7702Compliant interface',
-      'NonReentrant modifier usage'
-    ],
-    analysis_source: 'llm-detail'
-  });
+  /** Diagnosis result from POST /v1/impl/scan; used for AI Audit Report modal. */
+  const [diagnosisData, setDiagnosisData] = useState<{
+    label: AuditLabel;
+    confidence: number;
+    reasons: string[];
+    matched_patterns: string[];
+    analysis_source?: string;
+    implAddress?: string;
+    summary?: string;
+    reasonsText?: string;
+    chainId?: number;
+    description?: string;
+  } | null>(null);
+
+  const defaultDiagnosis = {
+    label: 'UNKNOWN' as const,
+    confidence: 0,
+    reasons: [] as string[],
+    matched_patterns: [] as string[],
+  };
 
   const handleToggle = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -195,26 +198,63 @@ export function AegisContent() {
     setSearchResults([impl]);
   };
 
-  const handleRunDiagnosis = (impl: Implementation) => {
+  const handleRunDiagnosis = async (impl: Implementation) => {
     setDiagnosingImpl(impl);
     setShowDiagnosisLoading(true);
-
-    // Simulate diagnosis loading
-    setTimeout(() => {
+    setDiagnosisData(null);
+    const chainId = getSelectedNetwork()?.chainId;
+    if (!chainId) {
       setShowDiagnosisLoading(false);
+      setDiagnosisData({
+        label: 'UNKNOWN',
+        confidence: 0,
+        reasons: ['No network selected. Select a network and try again.'],
+        matched_patterns: [],
+      });
       setShowDiagnosisReport(true);
-    }, 2000);
+      return;
+    }
+    try {
+      const res = await implScan({
+        chainId: Number(chainId),
+        implAddress: impl.address,
+      });
+      setDiagnosisData({
+        label: res.audit.label,
+        confidence: res.audit.confidence,
+        reasons: res.audit.reasons ?? [],
+        matched_patterns: res.audit.matched_patterns ?? [],
+        ...(res.registryTxHash != null && { analysis_source: res.registryTxHash }),
+        ...(res.implAddress != null && { implAddress: res.implAddress }),
+        ...(res.audit.summary != null && res.audit.summary !== '' && { summary: res.audit.summary }),
+        ...(res.reasonsText != null && res.reasonsText !== '' && { reasonsText: res.reasonsText }),
+        ...(res.chainId != null && { chainId: res.chainId }),
+        ...(res.audit.description != null && res.audit.description !== '' && { description: res.audit.description }),
+      });
+      setShowDiagnosisReport(true);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setDiagnosisData({
+        label: 'UNKNOWN',
+        confidence: 0,
+        reasons: [message],
+        matched_patterns: [],
+      });
+      setShowDiagnosisReport(true);
+    } finally {
+      setShowDiagnosisLoading(false);
+    }
   };
 
   const handleDiagnosisRegister = () => {
+    const diagnosis = diagnosisData ?? defaultDiagnosis;
     if (diagnosingImpl) {
-      // Update the implementation with diagnosis results
       const updatedImpl = {
         ...diagnosingImpl,
-        riskLevel: mockDiagnosisData.label === 'SAFE' ? 'safe' as const :
-          mockDiagnosisData.label === 'LOW_RISK' ? 'low' as const :
-            mockDiagnosisData.label === 'UNSAFE' ? 'high' as const : 'unknown' as const,
-        verdict: mockDiagnosisData.label === 'SAFE' || mockDiagnosisData.label === 'LOW_RISK' ? 'safe' as const : 'unsafe' as const,
+        riskLevel: diagnosis.label === 'SAFE' ? 'safe' as const :
+          diagnosis.label === 'LOW_RISK' ? 'low' as const :
+            diagnosis.label === 'UNSAFE' ? 'high' as const : 'unknown' as const,
+        verdict: diagnosis.label === 'SAFE' || diagnosis.label === 'LOW_RISK' ? 'safe' as const : 'unsafe' as const,
         title: diagnosingImpl.title === 'New Implementation Detected' ?
           `Implementation ${diagnosingImpl.id.substring(0, 8)}` :
           diagnosingImpl.title,
@@ -223,13 +263,12 @@ export function AegisContent() {
           diagnosingImpl.description
       };
 
-      // Move to registered
       setRegisteredImpls([...registeredImpls, updatedImpl]);
-      // Remove from search results
       setSearchResults(searchResults.filter(i => i.id !== diagnosingImpl.id));
     }
     setShowDiagnosisReport(false);
     setDiagnosingImpl(null);
+    setDiagnosisData(null);
     refetchAegisData();
   };
 
@@ -635,9 +674,10 @@ export function AegisContent() {
         onClose={() => {
           setShowDiagnosisReport(false);
           setDiagnosingImpl(null);
+          setDiagnosisData(null);
         }}
         onRegister={handleDiagnosisRegister}
-        diagnosis={mockDiagnosisData}
+        diagnosis={diagnosisData ?? defaultDiagnosis}
         advancedMode={false}
       />
     </div>
